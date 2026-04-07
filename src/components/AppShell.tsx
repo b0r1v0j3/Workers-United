@@ -15,7 +15,6 @@ import {
     FileText,
     Pencil,
     Plus,
-    Mail,
 } from "lucide-react";
 import Link from "next/link";
 import UnifiedNavbar from "./UnifiedNavbar";
@@ -352,6 +351,7 @@ function SidebarContent({
                 <>
                     <SidebarLink href={withInspect("/profile/worker/documents")} icon={<FileText size={20} />} label="Documents" isCollapsed={isCollapsed} tone="emerald" />
                     <SidebarLink href={withInspect("/profile/worker/queue")} icon={<ListOrdered size={20} />} label="Queue" isCollapsed={isCollapsed} tone="amber" />
+                    <SidebarLink href={withInspect("/profile/worker/matches")} icon={<Briefcase size={20} />} label="Match Threads" isCollapsed={isCollapsed} tone="blue" disabled={isAdminTestMode} />
                     <SidebarLink href={withInspect("/profile/worker/inbox")} icon={<MessageSquareMore size={20} />} label="Support" isCollapsed={isCollapsed} tone="violet" disabled={isAdminTestMode} />
                     <SidebarLink href={withInspect("/profile/worker/edit")} icon={<Pencil size={20} />} label="Edit Profile" isCollapsed={isCollapsed} tone="rose" />
                     <SidebarLink href="/profile/settings" icon={<Settings size={20} />} label="Account Settings" isCollapsed={isCollapsed} tone="blue" disabled={isAdminTestMode} />
@@ -362,6 +362,7 @@ function SidebarContent({
                 <>
                     <SidebarLink href={withInspect("/profile/employer?tab=jobs")} icon={<Briefcase size={20} />} label="Job Requests" isCollapsed={isCollapsed} tone="emerald" queryTab="jobs" />
                     <SidebarLink href={withInspect("/profile/employer?tab=post-job")} icon={<Plus size={20} />} label="New Job Request" isCollapsed={isCollapsed} tone="violet" queryTab="post-job" />
+                    <SidebarLink href={withInspect("/profile/employer/inbox")} icon={<MessageSquareMore size={20} />} label="Inbox" isCollapsed={isCollapsed} tone="blue" disabled={isAdminTestMode} />
                     <SidebarLink href="/profile/settings" icon={<Settings size={20} />} label="Account Settings" isCollapsed={isCollapsed} tone="blue" disabled={isAdminTestMode} />
                 </>
             )}
@@ -395,8 +396,7 @@ function SidebarContent({
                     <SidebarLink href="/admin/inbox" icon={<MessageSquareMore size={20} />} label="Inbox" isCollapsed={isCollapsed} tone="violet" />
                     <div className={`px-3 pt-3 pb-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest ${isCollapsed ? 'hidden' : 'block'}`}>Insights</div>
                     <SidebarLink href="/admin/analytics" icon={<BarChart3 size={20} />} label="Analytics" isCollapsed={isCollapsed} tone="blue" />
-                    <SidebarLink href="/admin/email-preview" icon={<Mail size={20} />} label="Emails" isCollapsed={isCollapsed} tone="blue" />
-                    <SidebarLink href="/admin/whatsapp-blast" icon={<MessageSquareMore size={20} />} label="WA Blast" isCollapsed={isCollapsed} tone="emerald" />
+                    <SidebarLink href="/admin/whatsapp" icon={<MessageSquareMore size={20} />} label="WhatsApp" isCollapsed={isCollapsed} tone="emerald" />
                     <SidebarLink href="/admin/settings" icon={<Settings size={20} />} label="Settings" isCollapsed={isCollapsed} tone="slate" />
                 </>
             )}
@@ -523,6 +523,7 @@ function AdminBreadcrumbs() {
         queue: 'Queue',
         review: 'Document Review',
         analytics: 'Analytics',
+        whatsapp: 'WhatsApp',
         inbox: 'Inbox',
         exceptions: 'Exceptions',
         'email-health': 'Email Health',

@@ -398,10 +398,10 @@ export function buildOpsMonitorReport(input: BuildOpsMonitorReportInput): OpsMon
         summary: `${input.opsSnapshot.openedCheckoutButUnpaid.length} opened-but-unpaid checkout case(s) and ${input.opsSnapshot.stalePendingPayments.length} stale pending payment row(s) need ops attention.`,
         evidence: [
             ...input.opsSnapshot.openedCheckoutButUnpaid.slice(0, 2).map((entry) =>
-                `${entry.fullName} • ${entry.hoursSinceCheckout}h since checkout • ${entry.nextStepLabel}`
+                `${entry.fullName} • ${entry.hoursSinceCheckout}h since checkout • ${entry.nextStepLabel}${entry.entrySourceLabel ? ` • ${entry.entrySourceLabel}` : ""}${entry.latestFunnelStageLabel ? ` • ${entry.latestFunnelStageLabel}` : ""}${entry.latestRecoveryOutcomeLabel ? ` • ${entry.latestRecoveryOutcomeLabel}` : ""}`
             ),
             ...input.opsSnapshot.stalePendingPayments.slice(0, 2).map((entry) =>
-                `${entry.fullName} • stale pending row • ${entry.hoursSinceCheckout}h old`
+                `${entry.fullName} • stale pending row • ${entry.hoursSinceCheckout}h old${entry.entrySourceLabel ? ` • ${entry.entrySourceLabel}` : ""}${entry.latestFunnelStageLabel ? ` • ${entry.latestFunnelStageLabel}` : ""}`
             ),
         ],
         links: [{ label: "Open analytics", href: "/admin/analytics" }],

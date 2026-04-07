@@ -104,7 +104,9 @@ export default async function EmailHealthPage() {
         .eq("id", user.id)
         .single();
 
-    if (normalizeUserType(profile?.user_type) !== "admin" && !isGodModeUser(user.email)) {
+    const profileType = normalizeUserType(profile?.user_type);
+    const metadataType = normalizeUserType(user.user_metadata?.user_type);
+    if (profileType !== "admin" && metadataType !== "admin" && !isGodModeUser(user.email)) {
         redirect("/profile");
     }
 

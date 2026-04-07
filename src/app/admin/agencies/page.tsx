@@ -4,6 +4,7 @@ import AppShell from "@/components/AppShell";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
+import { normalizeUserType } from "@/lib/domain";
 import AdminSectionHero from "@/components/admin/AdminSectionHero";
 import { Building2, BadgeCheck, Mail, MapPin, Users } from "lucide-react";
 import { DeleteUserButton } from "@/components/DeleteUserButton";
@@ -61,7 +62,9 @@ export default async function AgenciesPage() {
         .eq("id", user.id)
         .single();
 
-    if (profile?.user_type !== "admin" && !isGodModeUser(user.email)) {
+    const profileType = normalizeUserType(profile?.user_type);
+    const metadataType = normalizeUserType(user.user_metadata?.user_type);
+    if (profileType !== "admin" && metadataType !== "admin" && !isGodModeUser(user.email)) {
         redirect("/profile");
     }
 

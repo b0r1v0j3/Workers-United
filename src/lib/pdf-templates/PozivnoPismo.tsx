@@ -55,12 +55,12 @@ const s = StyleSheet.create({
         borderBottomColor: colors.border,
     },
     sigArea: {
-        marginTop: 24,
+        marginTop: 18,
         alignItems: "center" as const,
     },
     placeDate: {
         fontSize: 10,
-        marginBottom: 8,
+        marginBottom: 6,
         textAlign: "center" as const,
     },
     sigLabel: {
@@ -77,7 +77,7 @@ const s = StyleSheet.create({
         width: "70%",
         borderBottomWidth: 0.5,
         borderBottomColor: colors.black,
-        marginTop: 30,
+        marginTop: 22,
         marginBottom: 3,
         alignSelf: "center" as const,
     },
@@ -182,7 +182,7 @@ export default function PozivnoPismo({ data }: PozivnoProps) {
                 </Text>
 
                 <Text style={s.paragraph}>
-                    Контакт особа за сва обавештења: {data.EMPLOYER_DIRECTOR}, Директор, {data.CONTACT_PHONE}, {data.CONTACT_EMAIL}
+                    Контакт особа за сва обавештења: {data.CONTACT_PERSON_NAME}, {data.CONTACT_PHONE}, {data.CONTACT_EMAIL}
                 </Text>
 
                 <Text style={s.paragraph}>
@@ -194,18 +194,14 @@ export default function PozivnoPismo({ data }: PozivnoProps) {
                     <Text style={s.placeDate}>
                         У {data.SIGNING_CITY} дана {data.SIGNING_DATE_SR} год.
                     </Text>
-                    <Text style={s.sigLabel}>(место) (датум)</Text>
 
-                    <Text style={{ ...s.sigLabel, marginTop: 24 }}>
+                    <Text style={{ ...s.sigLabel, marginTop: 18 }}>
                         Овлашћено лице / Authorized Person
                     </Text>
 
                     <View style={s.sigLine} />
                     <Text style={s.sigName}>
                         {data.EMPLOYER_DIRECTOR}
-                    </Text>
-                    <Text style={s.sigLabel}>
-                        (печат и потпис позивара / stamp and signature)
                     </Text>
                 </View>
             </Page>

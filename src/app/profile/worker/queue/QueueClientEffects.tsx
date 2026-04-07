@@ -105,7 +105,12 @@ export function PayToJoinButton({
             const res = await fetch("/api/stripe/create-checkout", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ type: "entry_fee" }),
+                body: JSON.stringify({
+                    type: "entry_fee",
+                    source,
+                    successPath: redirectPath,
+                    cancelPath: redirectPath,
+                }),
             });
 
             const data = await res.json();

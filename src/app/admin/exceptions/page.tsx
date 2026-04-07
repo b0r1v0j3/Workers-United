@@ -44,7 +44,9 @@ export default async function AdminExceptionsPage() {
         .eq("id", user.id)
         .single();
 
-    if (normalizeUserType(profile?.user_type) !== "admin" && !isGodModeUser(user.email)) {
+    const profileType = normalizeUserType(profile?.user_type);
+    const metadataType = normalizeUserType(user.user_metadata?.user_type);
+    if (profileType !== "admin" && metadataType !== "admin" && !isGodModeUser(user.email)) {
         redirect("/profile");
     }
 
@@ -173,8 +175,18 @@ export default async function AdminExceptionsPage() {
                                         key={entry.paymentId}
                                         title={entry.fullName}
                                         subtitle={`${entry.email} • ${entry.hoursSinceCheckout}h since checkout`}
-                                        chips={[entry.workerStatus.replace(/_/g, " "), entry.nextStepLabel]}
-                                        details={`Started ${formatDate(entry.checkoutStartedAt)}${entry.deadlineAt ? ` • deadline ${formatDate(entry.deadlineAt)}` : ""}`}
+                                        chips={[
+                                            entry.workerStatus.replace(/_/g, " "),
+                                            entry.nextStepLabel,
+                                            entry.entrySourceLabel || "Unknown source",
+                                            entry.latestFunnelStageLabel || "Unknown stage",
+                                        ]}
+                                        details={
+                                            `Started ${formatDate(entry.checkoutStartedAt)}`
+                                            + (entry.latestRecoveryOutcomeLabel ? ` • ${entry.latestRecoveryOutcomeLabel}` : "")
+                                            + (entry.latestRecoveryAt ? ` • last recovery ${formatDate(entry.latestRecoveryAt)}` : "")
+                                            + (entry.deadlineAt ? ` • deadline ${formatDate(entry.deadlineAt)}` : "")
+                                        }
                                         primaryHref={entry.workspaceHref}
                                         primaryLabel="Inspect worker"
                                         secondaryHref={entry.caseHref}
@@ -192,8 +204,17 @@ export default async function AdminExceptionsPage() {
                                         key={`stale-${entry.paymentId}`}
                                         title={entry.fullName}
                                         subtitle={`${entry.email} • ${entry.hoursSinceCheckout}h old pending row`}
-                                        chips={[entry.workerStatus.replace(/_/g, " "), "Needs cleanup"]}
-                                        details="Payment state progressed, but a pending entry-fee row still remains."
+                                        chips={[
+                                            entry.workerStatus.replace(/_/g, " "),
+                                            "Needs cleanup",
+                                            entry.entrySourceLabel || "Unknown source",
+                                            entry.latestFunnelStageLabel || "Unknown stage",
+                                        ]}
+                                        details={
+                                            "Payment state progressed, but a pending entry-fee row still remains."
+                                            + (entry.latestRecoveryOutcomeLabel ? ` • ${entry.latestRecoveryOutcomeLabel}` : "")
+                                            + (entry.latestRecoveryAt ? ` • last recovery ${formatDate(entry.latestRecoveryAt)}` : "")
+                                        }
                                         primaryHref={entry.caseHref}
                                         primaryLabel="Open case"
                                         secondaryHref={entry.workspaceHref}

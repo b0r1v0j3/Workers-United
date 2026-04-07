@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import AppShell from "@/components/AppShell";
 import { isGodModeUser } from "@/lib/godmode";
+import { normalizeUserType } from "@/lib/domain";
 
 type RefundWorkerRow = {
     id: string;
@@ -25,7 +26,9 @@ export default async function AdminRefundsPage() {
         .eq("id", user.id)
         .single();
 
-    if (profile?.user_type !== "admin" && !isGodModeUser(user.email)) {
+    const profileType = normalizeUserType(profile?.user_type);
+    const metadataType = normalizeUserType(user.user_metadata?.user_type);
+    if (profileType !== "admin" && metadataType !== "admin" && !isGodModeUser(user.email)) {
         redirect("/profile");
     }
 
@@ -134,7 +137,9 @@ function ProcessRefundButton({ workerRecordId, paymentId }: { workerRecordId: st
             .eq("id", user.id)
             .single();
 
-        if (profile?.user_type !== "admin" && !isGodModeUser(user.email)) {
+        const profileType = normalizeUserType(profile?.user_type);
+        const metadataType = normalizeUserType(user.user_metadata?.user_type);
+        if (profileType !== "admin" && metadataType !== "admin" && !isGodModeUser(user.email)) {
             throw new Error("Forbidden");
         }
 
@@ -181,7 +186,9 @@ function DenyRefundButton({ workerRecordId }: { workerRecordId: string }) {
             .eq("id", user.id)
             .single();
 
-        if (profile?.user_type !== "admin" && !isGodModeUser(user.email)) {
+        const profileType = normalizeUserType(profile?.user_type);
+        const metadataType = normalizeUserType(user.user_metadata?.user_type);
+        if (profileType !== "admin" && metadataType !== "admin" && !isGodModeUser(user.email)) {
             throw new Error("Forbidden");
         }
 

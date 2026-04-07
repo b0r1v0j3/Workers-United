@@ -675,17 +675,17 @@ export function buildUnregisteredWorkerWhatsAppReply({
     if (wantsStatus) {
         switch (lang) {
             case "sr":
-                return `Za ovaj broj još ne vidim registrovan worker nalog. Prvi korak je da napravite nalog na ${website}/signup; kada nalog postoji, status, dokumenta i sledeći koraci se prate kroz dashboard. Ako imate tehnički problem, pošaljite kratak opis na ${supportEmail}.`;
+                return `Još ne vidim Workers United nalog povezan sa ovim WhatsApp brojem. Ako ste se već registrovali, najčešće znači da ste na sajtu koristili drugi broj telefona, pa se prijavite preko ${website}/login i proverite koji je broj sačuvan na profilu. Ako nalog još ne postoji, krenite od ${website}/signup. Ako imate tehnički problem, pošaljite kratak opis na ${supportEmail}.`;
             case "ar":
-                return `لا أرى حتى الآن حساب عامل مسجل لهذا الرقم. الخطوة الأولى هي إنشاء حساب على ${website}/signup؛ وبعد وجود الحساب تتم متابعة الحالة والمستندات والخطوات التالية من خلال لوحة التحكم. إذا كانت لديك مشكلة تقنية فأرسل وصفًا قصيرًا إلى ${supportEmail}.`;
+                return `لا أرى حتى الآن حساب Workers United مرتبطًا برقم WhatsApp هذا. إذا كنت قد سجلت بالفعل، فهذا يعني غالبًا أنك استخدمت رقم هاتف مختلفًا على الموقع، لذا سجّل الدخول عبر ${website}/login وتحقق من الرقم المحفوظ في ملفك. وإذا لم يكن الحساب موجودًا بعد، فابدأ من ${website}/signup. إذا كانت لديك مشكلة تقنية فأرسل وصفًا قصيرًا إلى ${supportEmail}.`;
             case "fr":
-                return `Je ne vois pas encore de compte worker enregistré pour ce numéro. La première étape est de créer un compte sur ${website}/signup ; ensuite le statut, les documents et les prochaines étapes se suivent dans le tableau de bord. En cas de problème technique, envoyez une courte description à ${supportEmail}.`;
+                return `Je ne vois pas encore de compte Workers United lié à ce numéro WhatsApp. Si vous vous êtes déjà inscrit, cela veut souvent dire qu’un autre numéro de téléphone a été utilisé sur le site ; connectez-vous via ${website}/login et vérifiez le numéro enregistré dans votre profil. Si le compte n’existe pas encore, commencez sur ${website}/signup. En cas de problème technique, envoyez une courte description à ${supportEmail}.`;
             case "pt":
-                return `Ainda não vejo uma conta de worker registrada para este número. O primeiro passo é criar uma conta em ${website}/signup; depois disso, status, documentos e próximos passos são acompanhados no painel. Se houver problema técnico, envie uma breve descrição para ${supportEmail}.`;
+                return `Ainda não vejo uma conta da Workers United vinculada a este número de WhatsApp. Se você já se cadastrou, isso normalmente significa que outro número de telefone foi usado no site, então entre em ${website}/login e confira qual número está salvo no seu perfil. Se a conta ainda não existe, comece em ${website}/signup. Se houver problema técnico, envie uma breve descrição para ${supportEmail}.`;
             case "hi":
-                return `इस नंबर के लिए अभी मुझे registered worker account नहीं दिख रहा। पहला step है ${website}/signup पर account बनाना; उसके बाद status, documents और next steps dashboard में दिखते हैं। अगर technical problem है तो short description ${supportEmail} पर भेजिए।`;
+                return `मुझे अभी इस WhatsApp नंबर से linked Workers United account नहीं दिख रहा। अगर आपने पहले से signup किया है, तो अक्सर इसका मतलब होता है कि वेबसाइट पर कोई दूसरा phone number इस्तेमाल हुआ था, इसलिए ${website}/login पर log in करके profile में saved number check कीजिए। अगर account अभी बना ही नहीं है, तो ${website}/signup से शुरू कीजिए। अगर technical problem है तो short description ${supportEmail} पर भेजिए।`;
             default:
-                return `I do not see a registered worker account for this number yet. The first step is to create an account at ${website}/signup; after that, status, documents, and next steps are tracked in the dashboard. If you have a technical issue, send a short description to ${supportEmail}.`;
+                return `I do not see a Workers United account linked to this WhatsApp number yet. If you already signed up, that usually means a different phone number was used on the website, so log in at ${website}/login and check which number is saved on your profile. If the account does not exist yet, start at ${website}/signup. If you have a technical issue, send a short description to ${supportEmail}.`;
         }
     }
 

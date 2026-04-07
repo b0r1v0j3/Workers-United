@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createTypedAdminClient } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
 import { normalizeUserType } from "@/lib/domain";
-import { listSupportConversationSummaries } from "@/lib/messaging";
+import { listAdminConversationSummaries } from "@/lib/messaging";
 import { checkRateLimit, standardLimiter } from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: "Admin access required" }, { status: 403 });
         }
 
-        const conversations = await listSupportConversationSummaries(admin);
+        const conversations = await listAdminConversationSummaries(admin);
         return NextResponse.json({ conversations });
     } catch (error) {
         console.error("[AdminSupportInbox] GET failed:", error);

@@ -13,6 +13,12 @@ import {
 import { getWorkerDocumentProgress } from "@/lib/worker-documents";
 import { pickCanonicalWorkerRecord } from "@/lib/workers";
 import {
+    getCheckoutEntrySourceLabel,
+    getCheckoutFunnelStageLabel,
+    getCheckoutRecoveryOutcomeLabel,
+    readCheckoutRecoveryMetadata,
+} from "@/lib/checkout-recovery-attribution";
+import {
     buildWhatsAppQualitySnapshot,
     type WhatsAppQualityActivityRow,
     type WhatsAppQualitySnapshot,
@@ -95,6 +101,14 @@ export interface CheckoutException extends ExceptionWorkerBase {
     hoursSinceCheckout: number;
     nextStepLabel: string;
     deadlineAt: string | null;
+    entrySource?: string;
+    entrySourceLabel?: string;
+    latestFunnelStage?: string;
+    latestFunnelStageLabel?: string;
+    latestRecoveryOutcome?: string;
+    latestRecoveryOutcomeLabel?: string;
+    latestRecoveryStep?: number | null;
+    latestRecoveryAt?: string | null;
 }
 
 export interface PaymentQualityException extends ExceptionWorkerBase {
@@ -525,6 +539,7 @@ export async function getAdminExceptionSnapshot() {
 
         const worker = workerMap.get(profileId) || null;
         const workerActivated = !!worker?.entry_fee_paid || !!worker?.job_search_active || !!worker?.queue_joined_at;
+        const recoveryMetadata = readCheckoutRecoveryMetadata(pendingEntry.payment.metadata);
         const checkoutException = {
             ...buildWorkerBase(profile, worker),
             paymentId: pendingEntry.payment.id,
@@ -532,6 +547,14 @@ export async function getAdminExceptionSnapshot() {
             hoursSinceCheckout: Math.max(1, Math.floor((Date.now() - pendingEntry.checkoutCreatedAt.getTime()) / (1000 * 60 * 60))),
             nextStepLabel: getNextRecoveryStepLabel((Date.now() - pendingEntry.checkoutCreatedAt.getTime()) / (1000 * 60 * 60)),
             deadlineAt: pendingEntry.payment.deadline_at,
+            entrySource: recoveryMetadata.entrySource,
+            entrySourceLabel: getCheckoutEntrySourceLabel(recoveryMetadata.entrySource),
+            latestFunnelStage: recoveryMetadata.latestFunnelStage,
+            latestFunnelStageLabel: getCheckoutFunnelStageLabel(recoveryMetadata.latestFunnelStage),
+            latestRecoveryOutcome: recoveryMetadata.latestRecoveryOutcome,
+            latestRecoveryOutcomeLabel: getCheckoutRecoveryOutcomeLabel(recoveryMetadata.latestRecoveryOutcome),
+            latestRecoveryStep: recoveryMetadata.latestRecoveryStep,
+            latestRecoveryAt: recoveryMetadata.latestRecoveryAt,
         } satisfies CheckoutException;
 
         if (completedEntryFeeProfiles.has(profileId) || workerActivated) {

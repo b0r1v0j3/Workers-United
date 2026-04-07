@@ -7,6 +7,7 @@ import ConversationThread, { type ThreadMessage } from "@/components/messaging/C
 
 interface SupportConversationSummary {
     id: string;
+    type: "support" | "match";
     status: string | null;
     participantRole: "worker" | "employer" | "agency";
     participantName: string;
@@ -32,6 +33,10 @@ function formatStatusLabel(status: string | null): string {
     }
 
     return status.replace(/_/g, " ");
+}
+
+function formatConversationType(type: "support" | "match"): string {
+    return type === "match" ? "Match" : "Support";
 }
 
 export default function AdminInboxClient() {
@@ -250,9 +255,14 @@ export default function AdminInboxClient() {
                                                     {conversation.participantEmail || "No email"} • {conversation.participantRole}
                                                 </div>
                                             </div>
-                                            <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${isActive ? "bg-white/10 text-white" : "bg-[#f3f4f6] text-[#57534e]"}`}>
-                                                {formatStatusLabel(conversation.status)}
-                                            </span>
+                                            <div className="flex flex-col items-end gap-1">
+                                                <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${isActive ? "bg-white/10 text-white" : "bg-[#f3f4f6] text-[#57534e]"}`}>
+                                                    {formatStatusLabel(conversation.status)}
+                                                </span>
+                                                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${isActive ? "bg-white/10 text-white/90" : "bg-[#eef2ff] text-[#4c51bf]"}`}>
+                                                    {formatConversationType(conversation.type)}
+                                                </span>
+                                            </div>
                                         </div>
                                         <p className={`mt-3 line-clamp-2 text-xs leading-relaxed ${isActive ? "text-white/80" : "text-[#57534e]"}`}>
                                             {conversation.lastMessagePreview || "No messages yet"}
@@ -277,7 +287,7 @@ export default function AdminInboxClient() {
                 ) : selectedConversation && thread ? (
                     <ConversationThread
                         title={selectedConversation.participantName}
-                        subtitle={`${selectedConversation.participantRole} support thread${selectedConversation.participantEmail ? ` • ${selectedConversation.participantEmail}` : ""}`}
+                        subtitle={`${formatConversationType(selectedConversation.type)} • ${selectedConversation.participantRole}${selectedConversation.participantEmail ? ` • ${selectedConversation.participantEmail}` : ""}`}
                         messages={thread.messages}
                         placeholder="Write a support reply..."
                         canSend={thread.canWrite}

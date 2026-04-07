@@ -14,6 +14,8 @@ const geminiAI = process.env.GEMINI_API_KEY
 
 export interface PassportData {
     full_name: string;
+    surname: string;
+    given_names: string;
     passport_number: string;
     nationality: string;
     date_of_birth: string;
@@ -586,6 +588,8 @@ Return a JSON object with EXACTLY these fields:
   "summary": "short admin-facing summary of what is visible",
   "worker_guidance": "short direct instruction telling the worker what to upload next",
   "full_name": "SURNAME GIVEN_NAMES",
+  "surname": "SURNAME as printed on the passport Surname/Nom line",
+  "given_names": "GIVEN NAMES as printed on the passport Given Names/Prénoms line",
   "passport_number": "ABC123456",
   "nationality": "COUNTRY",
   "date_of_birth": "YYYY-MM-DD",
@@ -638,6 +642,8 @@ Return ONLY the JSON object, no other text.`;
             success: true,
             data: {
                 full_name: parsed.full_name,
+                surname: parsed.surname || "",
+                given_names: parsed.given_names || "",
                 passport_number: parsed.passport_number,
                 nationality: parsed.nationality,
                 date_of_birth: parsed.date_of_birth,
@@ -708,6 +714,69 @@ export function shouldTrustPassportExpiryExtraction(input: {
     }
 
     return true;
+}
+
+export interface NameSwapResult {
+    hasSwap: boolean;
+    details: string;
+}
+
+/**
+ * Detect if passport-extracted surname/given_names are swapped relative to
+ * the profile's first_name/last_name fields.
+ * Returns a diagnostic even when the full name matches (because the Diamond Star
+ * pattern is: full name is correct but individual fields are swapped).
+ */
+export function detectNameFieldSwap(
+    passport: { surname: string; given_names: string },
+    profile: { first_name: string; last_name: string },
+): NameSwapResult {
+    const norm = (s: string) => s.toLowerCase().replace(/[^a-z\s]/g, "").trim();
+
+    const pSurname = norm(passport.surname);
+    const pGiven = norm(passport.given_names);
+    const profFirst = norm(profile.first_name);
+    const profLast = norm(profile.last_name);
+
+    if (!pSurname || !pGiven || !profFirst || !profLast) {
+        return { hasSwap: false, details: "" };
+    }
+
+    // Correct mapping: passport surname == profile last_name, passport given == profile first_name
+    const correctMapping =
+        pSurname === profLast && pGiven === profFirst;
+
+    if (correctMapping) {
+        return { hasSwap: false, details: "" };
+    }
+
+    // Swapped: passport surname == profile first_name, passport given == profile last_name
+    const swappedMapping =
+        pSurname === profFirst && pGiven === profLast;
+
+    if (swappedMapping) {
+        return {
+            hasSwap: true,
+            details: `Name/surname swapped in profile: first_name="${profile.first_name}" matches passport SURNAME, last_name="${profile.last_name}" matches passport GIVEN NAMES. Should be first_name="${passport.given_names}", last_name="${passport.surname}".`,
+        };
+    }
+
+    // Partial match — could be multi-word name split differently
+    const passportParts = `${pGiven} ${pSurname}`.split(/\s+/).sort().join(" ");
+    const profileParts = `${profFirst} ${profLast}`.split(/\s+/).sort().join(" ");
+
+    if (passportParts === profileParts) {
+        // Same name parts but different first/last split
+        if (pSurname !== profLast) {
+            return {
+                hasSwap: true,
+                details: `Name field mismatch: passport says surname="${passport.surname}", given="${passport.given_names}" but profile has first_name="${profile.first_name}", last_name="${profile.last_name}".`,
+            };
+        }
+        return { hasSwap: false, details: "" };
+    }
+
+    return { hasSwap: false, details: "" };
 }
 
 export function compareNames(aiName: string, signupName: string): boolean {

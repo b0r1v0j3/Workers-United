@@ -6,6 +6,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import InternationalPhoneField from "@/components/forms/InternationalPhoneField";
 import AdaptiveSelect from "@/components/forms/AdaptiveSelect";
+import {
+    profileSurfaceClass,
+    WorkspaceHero,
+} from "@/components/profile/WorkspaceFrame";
 import { syncCurrentUserAuthContact } from "@/lib/auth-contact-sync-client";
 import { getCountryDisplayLabel } from "@/lib/country-display";
 import { EMPLOYER_INDUSTRIES, COMPANY_SIZES, EUROPEAN_COUNTRIES } from "@/lib/constants";
@@ -104,8 +108,7 @@ function createCompanyFormFromEmployer(employer: EmployerProfile | null): Compan
 // ─── Shared styles ──────────────────────────────────────────────
 const inputClass = "min-w-0 w-full rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-[15px] text-[#18181b] outline-none transition hover:bg-[#fafafa] focus:border-[#111111] focus:bg-white focus:ring-0";
 const labelClass = "mb-2 block text-[11px] font-semibold uppercase tracking-[0.16em] text-[#9ca3af]";
-const surfaceClass = "relative rounded-none border-0 bg-transparent px-1 pt-5 shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-[26px] sm:border sm:border-[#e5e7eb] sm:bg-white sm:p-6 sm:shadow-[0_20px_50px_-40px_rgba(15,23,42,0.18)] sm:before:hidden";
-const heroSurfaceClass = "relative overflow-hidden rounded-none border-0 bg-transparent px-1 py-0 shadow-none sm:rounded-[28px] sm:border sm:border-[#e5e7eb] sm:bg-white sm:p-6 sm:shadow-[0_30px_70px_-52px_rgba(15,23,42,0.22)]";
+const surfaceClass = profileSurfaceClass;
 
 type TabType = "company" | "post-job" | "jobs";
 
@@ -539,37 +542,21 @@ export default function EmployerProfilePage({
 
     return (
         <div className="space-y-6">
-            <section className={heroSurfaceClass}>
-                <div className="relative z-10 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                    <div className="max-w-2xl">
-                        <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6b7280]">
-                            <Building2 size={14} />
-                            Employer Workspace
-                        </div>
-                        <h1 className="text-3xl font-semibold tracking-tight text-[#18181b]">
-                            {companyForm.company_name || (readOnlyPreview ? "Employer Preview" : "Company Profile")}
-                        </h1>
-                        <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#52525b]">
-                            {workspaceSummary}
-                        </p>
-                        {hasCountry && (
-                            <p className="mt-3 text-xs font-medium uppercase tracking-[0.18em] text-[#9ca3af]">
-                                {companyForm.country}
-                                {companyForm.city ? ` · ${companyForm.city}` : ""}
-                                {companyForm.website ? ` · ${companyForm.website}` : ""}
-                            </p>
-                        )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                        <EmployerMetricCard label="Completion" value={`${completion}%`} />
-                        <EmployerMetricCard label="Jobs" value={jobs.length} />
-                        <EmployerMetricCard label="Open" value={openJobsCount} />
-                        <EmployerMetricCard label="Status" value={workspaceStatus} />
-                    </div>
-                </div>
-                <div className="pointer-events-none absolute -right-16 top-0 h-40 w-40 rounded-full bg-[#111111]/5 blur-3xl" />
-            </section>
+            <WorkspaceHero
+                badgeIcon={<Building2 size={14} />}
+                badgeLabel="Employer Workspace"
+                title={companyForm.company_name || (readOnlyPreview ? "Employer Preview" : "Company Profile")}
+                summary={workspaceSummary}
+                meta={hasCountry
+                    ? `${companyForm.country}${companyForm.city ? ` · ${companyForm.city}` : ""}${companyForm.website ? ` · ${companyForm.website}` : ""}`
+                    : null}
+                metrics={[
+                    { label: "Completion", value: `${completion}%` },
+                    { label: "Jobs", value: jobs.length },
+                    { label: "Open", value: openJobsCount },
+                    { label: "Status", value: workspaceStatus },
+                ]}
+            />
 
             <section className="space-y-6">
                         {/* ====================== COMPANY INFO TAB ====================== */}
@@ -919,15 +906,6 @@ export default function EmployerProfilePage({
 }
 
 // ─── Helper Components ──────────────────────────────────────────
-
-function EmployerMetricCard({ label, value }: { label: string; value: string | number }) {
-    return (
-        <div className="rounded-2xl border border-[#e5e7eb] bg-[#fafafa] px-4 py-3 shadow-[0_18px_35px_-32px_rgba(15,23,42,0.18)]">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#9ca3af]">{label}</div>
-            <div className="mt-2 text-2xl font-semibold tracking-tight text-[#18181b]">{value}</div>
-        </div>
-    );
-}
 
 function InfoRow({ icon, label, value }: { icon: React.ReactNode, label: string, value: string | null | undefined }) {
     return (

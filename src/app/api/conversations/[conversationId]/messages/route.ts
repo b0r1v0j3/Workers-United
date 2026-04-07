@@ -5,6 +5,7 @@ import { normalizeUserType } from "@/lib/domain";
 import { isGodModeUser } from "@/lib/godmode";
 import {
     appendConversationMessage,
+    ConversationMessageBlockedError,
     getConversationAccess,
     getConversationMessages,
     getSupportAccessState,
@@ -179,7 +180,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
     } catch (error) {
         console.error("[ConversationMessages] POST failed:", error);
         const message = error instanceof Error ? error.message : "Failed to send message.";
-        const status = message === "Message body is required." ? 400 : 500;
+        const status = message === "Message body is required."
+            ? 400
+            : error instanceof ConversationMessageBlockedError
+                ? 403
+                : 500;
         return NextResponse.json({ error: message }, { status });
     }
 }

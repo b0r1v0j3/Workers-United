@@ -292,9 +292,14 @@ export default function OfferClient({ offer, workerRecord, isExpired, expiresAt 
                         <p className="text-[#65676b] mb-6">
                             Your visa application process has started. We will contact you with next steps.
                         </p>
-                        <Link href="/profile/worker" className="bg-[#1877f2] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#166fe5] transition-colors inline-block">
-                            Go to Profile
-                        </Link>
+                        <div className="flex flex-wrap items-center justify-center gap-3">
+                            <Link href="/profile/worker/matches" className="bg-[#111111] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#1f1f1f] transition-colors inline-block">
+                                Open Match Thread
+                            </Link>
+                            <Link href="/profile/worker" className="bg-[#1877f2] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#166fe5] transition-colors inline-block">
+                                Go to Profile
+                            </Link>
+                        </div>
                     </div>
                 )}
 

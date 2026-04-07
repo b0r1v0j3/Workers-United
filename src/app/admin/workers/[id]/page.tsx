@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import type { Json } from "@/lib/database.types";
 import { isGodModeUser } from "@/lib/godmode";
+import { normalizeUserType } from "@/lib/domain";
 import { queueEmail } from "@/lib/email-templates";
 import { buildContractDataForMatch } from "@/lib/contract-data";
 import AdminSectionHero from "@/components/admin/AdminSectionHero";
@@ -122,6 +123,31 @@ interface WorkerAgencyRow {
     profile_id?: string | null;
 }
 
+interface WorkerMatchRow {
+    employer_id?: string | null;
+    id: string;
+    status?: string | null;
+}
+
+interface WorkerOfferRow {
+    expires_at?: string | null;
+    id: string;
+    job_request_id?: string | null;
+    status?: string | null;
+}
+
+interface WorkerJobRequestRow {
+    employer_id?: string | null;
+    id: string;
+    title?: string | null;
+}
+
+interface WorkerEmployerRow {
+    company_name?: string | null;
+    id: string;
+    profile_id?: string | null;
+}
+
 function getSingleSearchParam(value: string | string[] | undefined) {
     return Array.isArray(value) ? value[0] : value;
 }
@@ -179,7 +205,9 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
         .eq("id", user.id)
         .single();
 
-    if (profile?.user_type !== 'admin' && !isOwner) {
+    const profileType = normalizeUserType(profile?.user_type);
+    const metadataType = normalizeUserType(user.user_metadata?.user_type);
+    if (profileType !== "admin" && metadataType !== "admin" && !isOwner) {
         redirect("/profile");
     }
 
@@ -218,6 +246,8 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
         targetPaymentsResult,
         signaturesResult,
         agencyResult,
+        latestMatchResult,
+        latestOfferResult,
     ] = await Promise.all([
         profileId
             ? adminClient
@@ -263,6 +293,23 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                 .eq("id", resolvedWorkerRecord.agency_id)
                 .maybeSingle()
             : Promise.resolve({ data: null }),
+        resolvedWorkerRecord?.id
+            ? adminClient
+                .from("matches")
+                .select("id, status, employer_id")
+                .eq("worker_id", resolvedWorkerRecord.id)
+                .limit(1)
+                .maybeSingle()
+            : Promise.resolve({ data: null }),
+        resolvedWorkerRecord?.id
+            ? adminClient
+                .from("offers")
+                .select("id, status, job_request_id, expires_at")
+                .eq("worker_id", resolvedWorkerRecord.id)
+                .order("expires_at", { ascending: false })
+                .limit(1)
+                .maybeSingle()
+            : Promise.resolve({ data: null }),
     ]);
 
     const workerRecord = resolvedWorkerRecord;
@@ -288,13 +335,35 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
     });
     const signatures = Array.isArray(signaturesResult.data) ? (signaturesResult.data as WorkerSignatureRow[]) : [];
     const agencyRecord = (agencyResult.data as WorkerAgencyRow | null) || null;
+    const latestMatch = (latestMatchResult.data as WorkerMatchRow | null) || null;
+    const latestOffer = (latestOfferResult.data as WorkerOfferRow | null) || null;
+
+    let linkedJobRequest: WorkerJobRequestRow | null = null;
+    if (latestOffer?.job_request_id) {
+        const { data: linkedJobRequestResult } = await adminClient
+            .from("job_requests")
+            .select("id, title, employer_id")
+            .eq("id", latestOffer.job_request_id)
+            .maybeSingle();
+        linkedJobRequest = (linkedJobRequestResult as WorkerJobRequestRow | null) || null;
+    }
+
+    const linkedEmployerId = latestMatch?.employer_id || linkedJobRequest?.employer_id || null;
+    let linkedEmployer: WorkerEmployerRow | null = null;
+    if (linkedEmployerId) {
+        const { data: linkedEmployerResult } = await adminClient
+            .from("employers")
+            .select("id, profile_id, company_name")
+            .eq("id", linkedEmployerId)
+            .maybeSingle();
+        linkedEmployer = (linkedEmployerResult as WorkerEmployerRow | null) || null;
+    }
 
     // Fetch contract data to allow manual editing for PDF generation
     let contractData = null;
-    const { data: matches } = await adminClient.from("matches").select("id").eq("worker_id", workerRecord?.id).limit(1);
-    if (matches && matches.length > 0) {
+    if (latestMatch?.id) {
         try {
-            const contractBuild = await buildContractDataForMatch(adminClient, matches[0].id);
+            const contractBuild = await buildContractDataForMatch(adminClient, latestMatch.id);
             contractData = contractBuild.contractData;
         } catch (error) {
             console.warn("Failed to build contract data preview:", error);
@@ -367,6 +436,21 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
             ? `/profile/worker/documents?inspect=${profileId}`
             : null;
     const queueInspectHref = profileId ? `/profile/worker/queue?inspect=${profileId}` : null;
+    const queueOpsHref = `/admin/queue?worker=${workerRecordId}`;
+    const jobsOpsHref = `/admin/jobs?worker=${workerRecordId}`;
+    const offerInspectHref = profileId && latestOffer?.id ? `/profile/worker/offers/${latestOffer.id}?inspect=${profileId}` : null;
+    const offerOpsLabel = latestOffer
+        ? `Offer ${toDisplayLabel(latestOffer.status || "pending")}`
+        : "Open matching hub";
+    const offerOpsHref = offerInspectHref || jobsOpsHref;
+    const linkedEmployerName = linkedEmployer?.company_name || null;
+    const employerWorkspaceInspectHref = linkedEmployer?.profile_id
+        ? `/profile/employer?inspect=${linkedEmployer.profile_id}`
+        : null;
+    const employerJobsInspectHref = linkedEmployer?.profile_id
+        ? `/profile/employer?tab=jobs&inspect=${linkedEmployer.profile_id}`
+        : null;
+    const linkedAgencyName = agencyRecord?.display_name || agencyRecord?.legal_name || null;
 
     async function approveWorker(formData: FormData) {
         "use server";
@@ -383,7 +467,9 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                 .eq("id", user.id)
                 .single();
 
-            if (profile?.user_type !== 'admin' && !isGodModeUser(user.email)) {
+            const profileType = normalizeUserType(profile?.user_type);
+            const metadataType = normalizeUserType(user.user_metadata?.user_type);
+            if (profileType !== "admin" && metadataType !== "admin" && !isGodModeUser(user.email)) {
                 throw new Error("Forbidden: Admin access only");
             }
 
@@ -446,7 +532,9 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                 .eq("id", user.id)
                 .single();
 
-            if (profile?.user_type !== 'admin') {
+            const profileType = normalizeUserType(profile?.user_type);
+            const metadataType = normalizeUserType(user.user_metadata?.user_type);
+            if (profileType !== "admin" && metadataType !== "admin" && !isGodModeUser(user.email)) {
                 throw new Error("Forbidden: Admin access only");
             }
 
@@ -564,7 +652,7 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
 
     return (
         <div className="max-w-[1200px] mx-auto px-5 py-10">
-                <div className="mb-6 flex flex-wrap items-center gap-3">
+                <div className="mb-3 flex flex-wrap items-center gap-3">
                     <Link
                         href="/admin/workers"
                         className="inline-flex items-center gap-2 rounded-xl border border-[#e5e7eb] bg-white px-4 py-2.5 text-sm font-semibold text-[#18181b] transition hover:bg-[#faf8f3]"
@@ -578,7 +666,7 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                             className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
                         >
                             <ExternalLink size={16} />
-                            Inspect workspace
+                            Worker workspace
                         </Link>
                     ) : null}
                     {documentsInspectHref ? (
@@ -587,7 +675,7 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                             className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-100"
                         >
                             <ExternalLink size={16} />
-                            Inspect documents
+                            Worker docs workspace
                         </Link>
                     ) : null}
                     {queueInspectHref ? (
@@ -596,15 +684,72 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                             className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-700 transition hover:bg-amber-100"
                         >
                             <ListOrdered size={16} />
-                            Inspect queue
+                            Worker queue workspace
                         </Link>
                     ) : null}
+                </div>
+                <div className="mb-6 flex flex-wrap items-center gap-3">
+                    <Link
+                        href={queueOpsHref}
+                        className="inline-flex items-center gap-2 rounded-xl border border-[#f2d7a6] bg-[#fff7ed] px-4 py-2.5 text-sm font-semibold text-[#9a3412] transition hover:bg-[#ffedd5]"
+                    >
+                        <ListOrdered size={16} />
+                        Queue ops
+                    </Link>
+                    <Link
+                        href={offerOpsHref}
+                        className="inline-flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-4 py-2.5 text-sm font-semibold text-orange-700 transition hover:bg-orange-100"
+                    >
+                        <ExternalLink size={16} />
+                        {offerOpsLabel}
+                    </Link>
+                    {employerWorkspaceInspectHref ? (
+                        <Link
+                            href={employerWorkspaceInspectHref}
+                            className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100"
+                        >
+                            <ExternalLink size={16} />
+                            Employer workspace{linkedEmployerName ? ` · ${linkedEmployerName}` : ""}
+                        </Link>
+                    ) : null}
+                    {employerJobsInspectHref ? (
+                        <Link
+                            href={employerJobsInspectHref}
+                            className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-white px-4 py-2.5 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-50"
+                        >
+                            <ExternalLink size={16} />
+                            Employer jobs
+                        </Link>
+                    ) : null}
+                    {isAgencyManagedCase && linkedAgencyName && workspaceInspectHref ? (
+                        <Link
+                            href={workspaceInspectHref}
+                            className="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-sm font-semibold text-violet-700 transition hover:bg-violet-100"
+                        >
+                            <ExternalLink size={16} />
+                            Agency workspace · {linkedAgencyName}
+                        </Link>
+                    ) : null}
+                    <a
+                        href="#financials-panel"
+                        className="inline-flex items-center gap-2 rounded-xl border border-[#e5e7eb] bg-white px-4 py-2.5 text-sm font-semibold text-[#18181b] transition hover:bg-[#faf8f3]"
+                    >
+                        <ExternalLink size={16} />
+                        Payments panel
+                    </a>
+                    <a
+                        href="#documents-panel"
+                        className="inline-flex items-center gap-2 rounded-xl border border-[#e5e7eb] bg-white px-4 py-2.5 text-sm font-semibold text-[#18181b] transition hover:bg-[#faf8f3]"
+                    >
+                        <ExternalLink size={16} />
+                        Documents panel
+                    </a>
                 </div>
 
                 <AdminSectionHero
                     eyebrow="Worker case view"
                     title={displayName}
-                    description="Admin case view for approvals, documents, payments, and matching. Use the inspect links above when you want the real worker workspace instead of the admin control surface."
+                    description="Admin case view for approvals, documents, payments, and matching. Use the links above to jump straight into worker, agency, employer, queue, offer, and panel-level operations without leaving dead-end pages."
                     metrics={[
                         { label: "Status", value: toDisplayLabel(workerStatus), meta: approvalStateLabel },
                         { label: "Completion", value: `${profileCompletion}%`, meta: displayEmail || "No email" },
@@ -939,11 +1084,12 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                             )}
                         </OpsPanelCard>
 
-                        <OpsPanelCard
-                            eyebrow="Financials"
-                            title="Payments and contract data"
-                            description="Track completed payments, pending sessions, and the current contract payload used for generated PDFs."
-                        >
+                        <div id="financials-panel" className="scroll-mt-28">
+                            <OpsPanelCard
+                                eyebrow="Financials"
+                                title="Payments and contract data"
+                                description="Track completed payments, pending sessions, and the current contract payload used for generated PDFs."
+                            >
                             <div className="space-y-4">
                                 {contractData ? (
                                     <div className="rounded-[24px] border border-[#ece8dd] bg-[#fcfbf8] p-5">
@@ -962,8 +1108,8 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                             <InfoRow label="MB" value={contractData.employer_mb} />
                                         </div>
                                         <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs leading-relaxed text-blue-900">
-                                            <strong>Editing note:</strong> use <code className="font-mono">/api/admin/edit-data</code> or the DB UI
-                                            until this case surface gets a dedicated contract editor.
+                                            <strong>Editing note:</strong> contract values are generated from the linked employer, job request, and match records.
+                                            If data is incorrect, update those source records first and then refresh this case.
                                         </div>
                                     </div>
                                 ) : (
@@ -1015,7 +1161,8 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                     )}
                                 </div>
                             </div>
-                        </OpsPanelCard>
+                            </OpsPanelCard>
+                        </div>
 
                         {profileId ? <DocumentPreview profileId={profileId} /> : null}
 
@@ -1056,11 +1203,12 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                     </div>
 
                     <div className="space-y-6">
-                        <OpsPanelCard
-                            eyebrow="Document operations"
-                            title="Verification queue"
-                            description="Review uploaded passport, biometric photo, and diploma, then move each document through AI or manual verification."
-                        >
+                        <div id="documents-panel" className="scroll-mt-28">
+                            <OpsPanelCard
+                                eyebrow="Document operations"
+                                title="Verification queue"
+                                description="Review uploaded passport, biometric photo, and diploma, then move each document through AI or manual verification."
+                            >
                             <div className="grid gap-3 sm:grid-cols-3">
                                 <MiniMetric label="Verified" value={`${verifiedDocumentsCount}/3`} meta="Ready to use" tone="emerald" />
                                 <MiniMetric label="Pending" value={pendingDocumentsCount} meta="Needs review" tone="amber" />
@@ -1312,7 +1460,8 @@ export default async function WorkerDetailPage({ params, searchParams }: PagePro
                                     No documents uploaded yet.
                                 </div>
                             )}
-                        </OpsPanelCard>
+                            </OpsPanelCard>
+                        </div>
                     </div>
                 </div>
             </div>
