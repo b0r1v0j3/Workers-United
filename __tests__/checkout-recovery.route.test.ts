@@ -65,4 +65,30 @@ describe("checkout-recovery abandonment helper", () => {
             error: null,
         });
     });
+
+    it("persists metadata patch when marking a pending payment abandoned", async () => {
+        const { client, spies } = createAdminClientForAbandonUpdate({
+            data: { id: "payment-1" },
+            error: null,
+        });
+
+        await tryMarkPendingEntryFeePaymentAbandoned(
+            client as never,
+            "payment-1",
+            "2026-03-21T12:00:00.000Z",
+            {
+                checkout_entry_source: "worker_queue",
+                latest_funnel_stage: "checkout_abandoned",
+            }
+        );
+
+        expect(spies.update).toHaveBeenCalledWith({
+            status: "abandoned",
+            deadline_at: "2026-03-21T12:00:00.000Z",
+            metadata: {
+                checkout_entry_source: "worker_queue",
+                latest_funnel_stage: "checkout_abandoned",
+            },
+        });
+    });
 });

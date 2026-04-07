@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -20,11 +20,15 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { getPreferredJobLabel } from "@/components/forms/PreferenceSheetField";
+import {
+    profileSurfaceClass,
+    WorkspaceHero,
+} from "@/components/profile/WorkspaceFrame";
 import { getEntryFeeUnlockState } from "@/lib/payment-eligibility";
 import AgencyWorkerCreateModal from "./AgencyWorkerCreateModal";
 import AgencyWorkerDocumentsModal from "./AgencyWorkerDocumentsModal";
 
-const surfaceClass = "relative rounded-none border-0 bg-transparent px-1 pt-5 shadow-none before:absolute before:left-3 before:right-3 before:top-0 before:h-px before:bg-[#e5e7eb] sm:rounded-[14px] sm:border sm:border-[#e7e7e5] sm:bg-white sm:shadow-[0_24px_70px_-54px_rgba(15,23,42,0.28)] sm:before:hidden";
+const surfaceClass = profileSurfaceClass;
 
 type PaymentState = "not_paid" | "pending" | "paid";
 
@@ -450,6 +454,7 @@ export default function AgencyDashboardClient({
                     targetWorkerId: worker.id,
                     successPath: "/profile/agency",
                     cancelPath: "/profile/agency",
+                    source: "agency_dashboard",
                 }),
             });
             const data = await response.json();
@@ -518,30 +523,21 @@ export default function AgencyDashboardClient({
     return (
         <>
             <div className="space-y-6">
-                <section className={`${surfaceClass} px-4 py-4 sm:px-6 sm:py-6`}>
-                    <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-                        <div className="max-w-2xl">
-                            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-[#fafafa] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6b7280]">
-                                <Building2 size={14} />
-                                Agency Workspace
-                            </div>
-                            <h1 className="text-[2rem] font-semibold tracking-tight text-[#111827] sm:text-3xl">{agency.displayName}</h1>
-                            <p className="mt-2 text-sm leading-relaxed text-[#6b7280]">
-                                One place for every worker profile. Create and edit the full worker form here, then use agency support anytime without leaving the workspace.
-                            </p>
-                            <p className="mt-3 text-xs font-medium uppercase tracking-[0.18em] text-[#9ca3af]">
-                                {agency.contactEmail}
-                            </p>
-                        </div>
-
-                        <div className="grid grid-flow-col auto-cols-[minmax(96px,1fr)] gap-3 overflow-x-auto pb-1 sm:grid-cols-4 sm:grid-flow-row sm:auto-cols-auto sm:overflow-visible sm:pb-0">
-                            <StatCard label="Total" value={stats.totalWorkers} icon={<Users size={18} />} />
-                            <StatCard label="Ready" value={stats.readyWorkers} icon={<FileCheck2 size={18} />} />
-                            <StatCard label="Paid" value={stats.paidWorkers} icon={<CreditCard size={18} />} />
-                            <StatCard label="Drafts" value={stats.draftWorkers} icon={<UserPlus size={18} />} />
-                        </div>
-                    </div>
-                </section>
+                <WorkspaceHero
+                    badgeIcon={<Building2 size={14} />}
+                    badgeLabel="Agency Workspace"
+                    title={agency.displayName}
+                    titleClassName="text-[2rem] font-semibold tracking-tight text-[#111827] sm:text-3xl"
+                    summary="One place for every worker profile. Create and edit the full worker form here, then use agency support anytime without leaving the workspace."
+                    meta={agency.contactEmail}
+                    metricsContainerClassName="grid grid-flow-col auto-cols-[minmax(96px,1fr)] gap-3 overflow-x-auto pb-1 sm:grid-cols-4 sm:grid-flow-row sm:auto-cols-auto sm:overflow-visible sm:pb-0"
+                    metrics={[
+                        { label: "Total", value: stats.totalWorkers, icon: <Users size={18} />, className: "min-w-[96px] sm:min-w-0" },
+                        { label: "Ready", value: stats.readyWorkers, icon: <FileCheck2 size={18} />, className: "min-w-[96px] sm:min-w-0" },
+                        { label: "Paid", value: stats.paidWorkers, icon: <CreditCard size={18} />, className: "min-w-[96px] sm:min-w-0" },
+                        { label: "Drafts", value: stats.draftWorkers, icon: <UserPlus size={18} />, className: "min-w-[96px] sm:min-w-0" },
+                    ]}
+                />
 
                 <section className={`${surfaceClass} flex flex-col gap-3 px-4 py-4 sm:px-6`}>
                     <div className="flex items-start gap-3">
@@ -876,18 +872,6 @@ export default function AgencyDashboardClient({
                 )
                 : null}
         </>
-    );
-}
-
-function StatCard({ label, value, icon }: { label: string; value: number; icon: ReactNode }) {
-    return (
-        <div className="min-w-[96px] rounded-[14px] border border-[#ececec] bg-[#fafafa] px-4 py-3 sm:min-w-0">
-            <div className="mb-2 flex items-center justify-between text-[#9ca3af]">
-                {icon}
-                <span className="text-[11px] font-semibold uppercase tracking-[0.18em]">{label}</span>
-            </div>
-            <div className="text-2xl font-semibold tracking-tight text-[#111827]">{value}</div>
-        </div>
     );
 }
 

@@ -384,6 +384,19 @@ describe("whatsapp-brain guards", () => {
         expect(reply).toContain("contact@workersunited.eu");
     });
 
+    it("makes anonymous status replies explicit when the WhatsApp number is not linked to an account", () => {
+        const reply = buildUnregisteredWorkerWhatsAppReply({
+            message: "I completed my profile already",
+            language: "English",
+            intent: "status",
+        });
+
+        expect(reply).toContain("linked to this WhatsApp number");
+        expect(reply).toContain("/login");
+        expect(reply).toContain("different phone number");
+        expect(reply).toContain("/signup");
+    });
+
     it("answers registered worker payment status deterministically once approval is done", () => {
         const reply = buildRegisteredWorkerWhatsAppReply({
             message: "Kako da platim?",

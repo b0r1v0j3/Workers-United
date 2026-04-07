@@ -4,6 +4,7 @@ import { isEmailDeliveryAccepted } from "@/lib/email-queue";
 import { createTypedAdminClient } from "@/lib/supabase/admin";
 import { queueEmail } from "@/lib/email-templates";
 import { logServerActivity } from "@/lib/activityLoggerServer";
+import type { Json } from "@/lib/database.types";
 import {
     resolveEntryFeeEligibilityForWorker,
     type EntryFeeEligibilityDocumentState,
@@ -11,6 +12,11 @@ import {
 } from "@/lib/payment-eligibility";
 import { hasKnownTypoEmailDomain, isInternalOrTestEmail } from "@/lib/reporting";
 import { normalizeWorkerPhone, pickCanonicalWorkerRecord } from "@/lib/workers";
+import {
+    buildCheckoutFunnelStage,
+    readCheckoutRecoveryMetadata,
+    type CheckoutRecoveryOutcome,
+} from "@/lib/checkout-recovery-attribution";
 
 type RecoveryStep = 1 | 2 | 3;
 
@@ -169,17 +175,81 @@ function wasRecoveryStepAlreadyQueued(emails: EmailQueueRow[], paymentId: string
     );
 }
 
+function buildRecoveryMetadataPatch(params: {
+    payment: PaymentRow;
+    checkoutOpenedAtIso: string;
+    recoveryStep: RecoveryStep | null;
+    recoveryOutcome: CheckoutRecoveryOutcome;
+    recoveryAtIso: string;
+    recoveryReason?: string | null;
+    recoveryError?: string | null;
+}): Json {
+    const existing = asObject(params.payment.metadata) || {};
+    const snapshot = readCheckoutRecoveryMetadata(params.payment.metadata);
+    const latestFunnelStage = buildCheckoutFunnelStage({
+        recoveryStep: params.recoveryStep ?? snapshot.latestRecoveryStep,
+        recoveryOutcome: params.recoveryOutcome,
+        fallbackStage: snapshot.latestFunnelStage,
+    });
+
+    return {
+        ...existing,
+        checkout_started_at: extractStringField(params.payment.metadata, "checkout_started_at") || params.checkoutOpenedAtIso,
+        checkout_opened_at: params.checkoutOpenedAtIso,
+        checkout_entry_source: snapshot.entrySource,
+        latest_recovery_step: params.recoveryStep,
+        latest_recovery_outcome: params.recoveryOutcome,
+        latest_recovery_reason: params.recoveryReason || null,
+        latest_recovery_error: params.recoveryError || null,
+        latest_recovery_at: params.recoveryAtIso,
+        latest_funnel_stage: latestFunnelStage,
+    } as Json;
+}
+
+async function updatePendingPaymentRecoveryMetadata(
+    admin: ReturnType<typeof createTypedAdminClient>,
+    payment: PaymentRow,
+    metadataPatch: Json
+) {
+    const { error } = await admin
+        .from("payments")
+        .update({ metadata: metadataPatch })
+        .eq("id", payment.id)
+        .eq("payment_type", "entry_fee")
+        .eq("status", "pending");
+
+    if (!error) {
+        payment.metadata = metadataPatch;
+    }
+
+    return {
+        updated: !error,
+        error: error?.message || null,
+    };
+}
+
 export async function tryMarkPendingEntryFeePaymentAbandoned(
     admin: ReturnType<typeof createTypedAdminClient>,
     paymentId: string,
-    deadlineAt: string
+    deadlineAt: string,
+    metadataPatch?: Json | null
 ) {
+    const updatePayload: {
+        status: string;
+        deadline_at: string;
+        metadata?: Json;
+    } = {
+        status: "abandoned",
+        deadline_at: deadlineAt,
+    };
+
+    if (metadataPatch && Object.keys(metadataPatch).length > 0) {
+        updatePayload.metadata = metadataPatch;
+    }
+
     const { data, error } = await admin
         .from("payments")
-        .update({
-            status: "abandoned",
-            deadline_at: deadlineAt,
-        })
+        .update(updatePayload)
         .eq("id", paymentId)
         .eq("payment_type", "entry_fee")
         .eq("status", "pending")
@@ -388,6 +458,8 @@ export async function GET(request: Request) {
 
             const hoursSinceCheckout = (now.getTime() - pendingEntry.checkoutCreatedAt.getTime()) / (1000 * 60 * 60);
             const recoveryStep = getRecoveryStep(hoursSinceCheckout);
+            const checkoutOpenedAtIso = pendingEntry.checkoutCreatedAt.toISOString();
+            const recoverySnapshot = readCheckoutRecoveryMetadata(pendingEntry.payment.metadata);
 
             const profile = profileMap.get(profileId);
             const worker = pickCanonicalWorkerRecord(workersByProfileId.get(profileId) || []);
@@ -395,9 +467,41 @@ export async function GET(request: Request) {
 
             if (!email || isInternalOrTestEmail(email) || hasKnownTypoEmailDomain(email)) {
                 invalidEmailSkipped++;
+                const suppressedMetadataPatch = buildRecoveryMetadataPatch({
+                    payment: pendingEntry.payment,
+                    checkoutOpenedAtIso,
+                    recoveryStep,
+                    recoveryOutcome: "suppressed",
+                    recoveryAtIso: nowIso,
+                    recoveryReason: "invalid_email",
+                });
+                const suppressedMetadataResult = await updatePendingPaymentRecoveryMetadata(
+                    admin,
+                    pendingEntry.payment,
+                    suppressedMetadataPatch
+                );
+                if (!suppressedMetadataResult.updated) {
+                    console.warn("[Checkout Recovery] Failed to persist invalid-email suppression metadata:", {
+                        paymentId: pendingEntry.payment.id,
+                        error: suppressedMetadataResult.error,
+                    });
+                }
 
                 if (recoveryStep === 3) {
-                    const abandonResult = await tryMarkPendingEntryFeePaymentAbandoned(admin, pendingEntry.payment.id, nowIso);
+                    const abandonedMetadataPatch = buildRecoveryMetadataPatch({
+                        payment: pendingEntry.payment,
+                        checkoutOpenedAtIso,
+                        recoveryStep,
+                        recoveryOutcome: "abandoned",
+                        recoveryAtIso: nowIso,
+                        recoveryReason: "invalid_email",
+                    });
+                    const abandonResult = await tryMarkPendingEntryFeePaymentAbandoned(
+                        admin,
+                        pendingEntry.payment.id,
+                        nowIso,
+                        abandonedMetadataPatch
+                    );
 
                     if (abandonResult.abandoned) {
                         markedAbandoned++;
@@ -437,8 +541,44 @@ export async function GET(request: Request) {
                     pendingAdminReviewSkipped++;
                 }
 
+                const suppressedMetadataPatch = buildRecoveryMetadataPatch({
+                    payment: pendingEntry.payment,
+                    checkoutOpenedAtIso,
+                    recoveryStep,
+                    recoveryOutcome: "suppressed",
+                    recoveryAtIso: nowIso,
+                    recoveryReason: unlockState.reason,
+                    recoveryError: unlockState.error || null,
+                });
+                const suppressedMetadataResult = await updatePendingPaymentRecoveryMetadata(
+                    admin,
+                    pendingEntry.payment,
+                    suppressedMetadataPatch
+                );
+                if (!suppressedMetadataResult.updated) {
+                    console.warn("[Checkout Recovery] Failed to persist ineligible suppression metadata:", {
+                        paymentId: pendingEntry.payment.id,
+                        reason: unlockState.reason,
+                        error: suppressedMetadataResult.error,
+                    });
+                }
+
                 if (recoveryStep === 3) {
-                    const abandonResult = await tryMarkPendingEntryFeePaymentAbandoned(admin, pendingEntry.payment.id, nowIso);
+                    const abandonedMetadataPatch = buildRecoveryMetadataPatch({
+                        payment: pendingEntry.payment,
+                        checkoutOpenedAtIso,
+                        recoveryStep,
+                        recoveryOutcome: "abandoned",
+                        recoveryAtIso: nowIso,
+                        recoveryReason: unlockState.reason,
+                        recoveryError: unlockState.error || null,
+                    });
+                    const abandonResult = await tryMarkPendingEntryFeePaymentAbandoned(
+                        admin,
+                        pendingEntry.payment.id,
+                        nowIso,
+                        abandonedMetadataPatch
+                    );
 
                     if (abandonResult.abandoned) {
                         markedAbandoned++;
@@ -454,6 +594,11 @@ export async function GET(request: Request) {
                 await logServerActivity(profileId, "checkout_recovery_suppressed", "payment", {
                     payment_id: pendingEntry.payment.id,
                     stripe_session_id: pendingEntry.payment.stripe_checkout_session_id,
+                    checkout_entry_source: recoverySnapshot.entrySource,
+                    checkout_opened_at: checkoutOpenedAtIso,
+                    latest_funnel_stage: suppressedMetadataPatch.latest_funnel_stage,
+                    recovery_step: recoveryStep,
+                    recovery_outcome: "suppressed",
                     reason: unlockState.reason,
                     error: unlockState.error || null,
                 }, "warning");
@@ -462,18 +607,55 @@ export async function GET(request: Request) {
 
             if (!recoveryStep) {
                 skipped++;
+                const skippedMetadataPatch = buildRecoveryMetadataPatch({
+                    payment: pendingEntry.payment,
+                    checkoutOpenedAtIso,
+                    recoveryStep: null,
+                    recoveryOutcome: "skipped",
+                    recoveryAtIso: nowIso,
+                    recoveryReason: "within_recovery_window",
+                });
+                await updatePendingPaymentRecoveryMetadata(admin, pendingEntry.payment, skippedMetadataPatch);
                 continue;
             }
 
             const existingRecoveryEmails = emailsByProfileId.get(profileId) || [];
             if (wasRecoveryStepAlreadyQueued(existingRecoveryEmails, pendingEntry.payment.id, recoveryStep)) {
                 skipped++;
+                const alreadyQueuedMetadataPatch = buildRecoveryMetadataPatch({
+                    payment: pendingEntry.payment,
+                    checkoutOpenedAtIso,
+                    recoveryStep,
+                    recoveryOutcome: "skipped",
+                    recoveryAtIso: nowIso,
+                    recoveryReason: "already_queued_for_step",
+                });
+                await updatePendingPaymentRecoveryMetadata(admin, pendingEntry.payment, alreadyQueuedMetadataPatch);
                 continue;
             }
 
             try {
                 const recipientName = profile?.full_name?.trim() || email.split("@")[0] || "Worker";
                 const recipientPhone = normalizeWorkerPhone(worker?.phone);
+                const recoveryOutcome: CheckoutRecoveryOutcome = "queued";
+                const queuedMetadataPatch = buildRecoveryMetadataPatch({
+                    payment: pendingEntry.payment,
+                    checkoutOpenedAtIso,
+                    recoveryStep,
+                    recoveryOutcome,
+                    recoveryAtIso: nowIso,
+                    recoveryReason: "recovery_window_reached",
+                });
+                const sentMetadataPatch = buildRecoveryMetadataPatch({
+                    payment: pendingEntry.payment,
+                    checkoutOpenedAtIso,
+                    recoveryStep,
+                    recoveryOutcome: "sent",
+                    recoveryAtIso: nowIso,
+                    recoveryReason: "recovery_window_reached",
+                });
+                const queuedFunnelStage = readCheckoutRecoveryMetadata(queuedMetadataPatch).latestFunnelStage;
+                const sentFunnelStage = readCheckoutRecoveryMetadata(sentMetadataPatch).latestFunnelStage;
 
                 const emailResult = await queueEmail(
                     admin,
@@ -485,6 +667,12 @@ export async function GET(request: Request) {
                         amount: "$9",
                         recoveryStep,
                         paymentId: pendingEntry.payment.id,
+                        checkoutEntrySource: recoverySnapshot.entrySource,
+                        checkoutOpenedAt: checkoutOpenedAtIso,
+                        latestFunnelStage: queuedFunnelStage,
+                        latestRecoveryOutcome: recoveryOutcome,
+                        latestRecoveryStep: recoveryStep,
+                        latestRecoveryAt: nowIso,
                     },
                     undefined,
                     recipientPhone || undefined
@@ -494,26 +682,43 @@ export async function GET(request: Request) {
                     throw new Error(emailResult.error || "Checkout recovery email failed");
                 }
 
+                const metadataResult = await updatePendingPaymentRecoveryMetadata(
+                    admin,
+                    pendingEntry.payment,
+                    emailResult.sent ? sentMetadataPatch : queuedMetadataPatch
+                );
+                if (!metadataResult.updated) {
+                    console.warn("[Checkout Recovery] Failed to persist recovery metadata:", {
+                        paymentId: pendingEntry.payment.id,
+                        step: recoveryStep,
+                        error: metadataResult.error,
+                    });
+                }
+
                 await logServerActivity(
                     profileId,
                     emailResult.sent ? "checkout_recovery_sent" : "checkout_recovery_queued",
                     "payment",
                     {
-                    step: recoveryStep,
-                    payment_id: pendingEntry.payment.id,
-                    stripe_session_id: pendingEntry.payment.stripe_checkout_session_id,
-                    hours_since_checkout: Math.floor(hoursSinceCheckout),
-                    delivery_status: emailResult.status,
-                    channel: emailResult.whatsapp?.sent
-                        ? "email+whatsapp"
-                        : recipientPhone
-                            ? "email_only_whatsapp_failed"
-                            : "email",
-                    whatsapp_delivery_status: emailResult.whatsapp?.attempted
-                        ? (emailResult.whatsapp.sent ? "sent" : "failed")
-                        : "not_attempted",
-                    whatsapp_error: emailResult.whatsapp?.error || null,
-                    whatsapp_retryable: emailResult.whatsapp?.retryable ?? null,
+                        step: recoveryStep,
+                        payment_id: pendingEntry.payment.id,
+                        stripe_session_id: pendingEntry.payment.stripe_checkout_session_id,
+                        hours_since_checkout: Math.floor(hoursSinceCheckout),
+                        checkout_opened_at: checkoutOpenedAtIso,
+                        checkout_entry_source: recoverySnapshot.entrySource,
+                        latest_funnel_stage: emailResult.sent ? sentFunnelStage : queuedFunnelStage,
+                        recovery_outcome: emailResult.sent ? "sent" : "queued",
+                        delivery_status: emailResult.status,
+                        channel: emailResult.whatsapp?.sent
+                            ? "email+whatsapp"
+                            : recipientPhone
+                                ? "email_only_whatsapp_failed"
+                                : "email",
+                        whatsapp_delivery_status: emailResult.whatsapp?.attempted
+                            ? (emailResult.whatsapp.sent ? "sent" : "failed")
+                            : "not_attempted",
+                        whatsapp_error: emailResult.whatsapp?.error || null,
+                        whatsapp_retryable: emailResult.whatsapp?.retryable ?? null,
                     }
                 );
 
@@ -523,8 +728,21 @@ export async function GET(request: Request) {
                 if (recoveryStep === 2) step2++;
                 if (recoveryStep === 3) {
                     step3++;
+                    const abandonedMetadataPatch = buildRecoveryMetadataPatch({
+                        payment: pendingEntry.payment,
+                        checkoutOpenedAtIso,
+                        recoveryStep,
+                        recoveryOutcome: "abandoned",
+                        recoveryAtIso: nowIso,
+                        recoveryReason: "recovery_window_reached",
+                    });
 
-                    const abandonResult = await tryMarkPendingEntryFeePaymentAbandoned(admin, pendingEntry.payment.id, nowIso);
+                    const abandonResult = await tryMarkPendingEntryFeePaymentAbandoned(
+                        admin,
+                        pendingEntry.payment.id,
+                        nowIso,
+                        abandonedMetadataPatch
+                    );
 
                     if (!abandonResult.abandoned) {
                         throw new Error(abandonResult.error || "Failed to mark checkout as abandoned");
@@ -535,12 +753,41 @@ export async function GET(request: Request) {
                     await logServerActivity(profileId, "checkout_marked_abandoned", "payment", {
                         payment_id: pendingEntry.payment.id,
                         hours_since_checkout: Math.floor(hoursSinceCheckout),
+                        checkout_opened_at: checkoutOpenedAtIso,
+                        checkout_entry_source: recoverySnapshot.entrySource,
+                        latest_funnel_stage: abandonedMetadataPatch.latest_funnel_stage,
+                        recovery_outcome: "abandoned",
                     }, "warning");
                 }
             } catch (sendError) {
                 failed++;
+                const failureMessage = sendError instanceof Error ? sendError.message : "Unknown error";
+                const failedMetadataPatch = buildRecoveryMetadataPatch({
+                    payment: pendingEntry.payment,
+                    checkoutOpenedAtIso,
+                    recoveryStep,
+                    recoveryOutcome: "failed",
+                    recoveryAtIso: nowIso,
+                    recoveryReason: "send_failed",
+                    recoveryError: failureMessage,
+                });
+                await updatePendingPaymentRecoveryMetadata(admin, pendingEntry.payment, failedMetadataPatch);
                 if (recoveryStep === 3) {
-                    const abandonResult = await tryMarkPendingEntryFeePaymentAbandoned(admin, pendingEntry.payment.id, nowIso);
+                    const abandonedMetadataPatch = buildRecoveryMetadataPatch({
+                        payment: pendingEntry.payment,
+                        checkoutOpenedAtIso,
+                        recoveryStep,
+                        recoveryOutcome: "abandoned",
+                        recoveryAtIso: nowIso,
+                        recoveryReason: "step3_send_failed",
+                        recoveryError: failureMessage,
+                    });
+                    const abandonResult = await tryMarkPendingEntryFeePaymentAbandoned(
+                        admin,
+                        pendingEntry.payment.id,
+                        nowIso,
+                        abandonedMetadataPatch
+                    );
 
                     if (abandonResult.abandoned) {
                         markedAbandoned++;
@@ -555,7 +802,11 @@ export async function GET(request: Request) {
                 await logServerActivity(profileId, "checkout_recovery_failed", "payment", {
                     step: recoveryStep,
                     payment_id: pendingEntry.payment.id,
-                    error: sendError instanceof Error ? sendError.message : "Unknown error",
+                    checkout_opened_at: checkoutOpenedAtIso,
+                    checkout_entry_source: recoverySnapshot.entrySource,
+                    latest_funnel_stage: failedMetadataPatch.latest_funnel_stage,
+                    recovery_outcome: "failed",
+                    error: failureMessage,
                 }, "error");
             }
         }

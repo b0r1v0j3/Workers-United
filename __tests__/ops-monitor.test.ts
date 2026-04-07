@@ -76,6 +76,14 @@ describe("ops monitor helpers", () => {
                         hoursSinceCheckout: 3,
                         nextStepLabel: "1h recovery window",
                         deadlineAt: null,
+                        entrySource: "worker_queue",
+                        entrySourceLabel: "Worker queue",
+                        latestFunnelStage: "recovery_step_1",
+                        latestFunnelStageLabel: "Recovery step 1",
+                        latestRecoveryOutcome: "sent",
+                        latestRecoveryOutcomeLabel: "Recovery sent",
+                        latestRecoveryStep: 1,
+                        latestRecoveryAt: "2026-03-17T06:00:00.000Z",
                     },
                 ],
                 manualReviewProfiles: [
@@ -235,6 +243,9 @@ describe("ops monitor helpers", () => {
         expect(report.metrics.criticalSignals).toBeGreaterThan(0);
         expect(report.metrics.highSignals).toBeGreaterThan(0);
         expect(report.sections.find((section) => section.name === "Documents")?.count).toBe(6);
+        const checkoutDriftSignal = report.signals.find((signal) => signal.key === "checkout-drift");
+        expect(checkoutDriftSignal?.evidence.join(" ")).toContain("Worker queue");
+        expect(checkoutDriftSignal?.evidence.join(" ")).toContain("Recovery step 1");
         expect(getOpsMonitorEmailReasons(report)).toEqual([
             expect.stringContaining("critical signal"),
             expect.stringContaining("high-priority signal"),

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
+import { ensureMatchConversationForOffer } from "@/lib/messaging";
 
 interface OfferRow {
     id: string;
@@ -71,6 +72,15 @@ export async function finalizeConfirmationFeeOffer(
         });
 
         assertNoError(positionsError, "Failed to increment positions filled");
+    }
+
+    try {
+        await ensureMatchConversationForOffer(admin, {
+            offerId: offer.id,
+            workerProfileId: profileId,
+        });
+    } catch (error) {
+        console.error("[OfferFinalization] Failed to ensure match conversation:", error);
     }
 
     return {

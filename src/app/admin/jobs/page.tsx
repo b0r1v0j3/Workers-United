@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
+import { normalizeUserType } from "@/lib/domain";
 import AppShell from "@/components/AppShell";
 import AdminSectionHero from "@/components/admin/AdminSectionHero";
 import JobsMatchClient from "./JobsMatchClient";
@@ -30,7 +31,9 @@ export default async function AdminJobsPage() {
         .eq("id", user.id)
         .single();
 
-    if (profile?.user_type !== 'admin' && !isGodModeUser(user.email)) {
+    const profileType = normalizeUserType(profile?.user_type);
+    const metadataType = normalizeUserType(user.user_metadata?.user_type);
+    if (profileType !== "admin" && metadataType !== "admin" && !isGodModeUser(user.email)) {
         redirect("/profile");
     }
 

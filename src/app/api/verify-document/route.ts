@@ -8,6 +8,7 @@ import {
     buildDocumentOrientationOcrPatch,
     detectDocumentBounds,
     detectDocumentOrientation,
+    detectNameFieldSwap,
     extractPassportData,
     fetchImageAsBase64,
     shouldTrustPassportExpiryExtraction,
@@ -412,6 +413,30 @@ export async function POST(request: Request) {
                                     ocrJson.passport_number_verified = false;
                                 } else {
                                     ocrJson.passport_number_verified = true;
+                                }
+                            }
+
+                            // Cross-check name fields: detect surname/given_names swap
+                            if (result.data.surname && result.data.given_names && targetWorkerProfileId) {
+                                const profile = await adminClient
+                                    .from("profiles")
+                                    .select("first_name, last_name")
+                                    .eq("id", targetWorkerProfileId)
+                                    .maybeSingle()
+                                    .then((r) => r.data);
+
+                                if (profile?.first_name && profile?.last_name) {
+                                    const swapCheck = detectNameFieldSwap(
+                                        { surname: result.data.surname, given_names: result.data.given_names },
+                                        { first_name: profile.first_name, last_name: profile.last_name },
+                                    );
+                                    if (swapCheck.hasSwap) {
+                                        status = 'manual_review';
+                                        qualityIssues.push(swapCheck.details);
+                                        ocrJson.name_field_swap_detected = true;
+                                    } else {
+                                        ocrJson.name_fields_verified = true;
+                                    }
                                 }
                             }
                         }

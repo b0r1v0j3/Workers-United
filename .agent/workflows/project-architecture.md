@@ -54,8 +54,8 @@ Workers-United/
 │   │   ├── signup/            # Signup page
 │   │   ├── profile/
 │   │   │   ├── page.tsx       # Auto-redirect (/profile → worker, employer, or agency)
-│   │   │   ├── worker/        # Worker workspace in shared AppShell with simplified `Overview / Documents / Queue / Support` language; overview no longer duplicates Documents/Queue/Support cards in the main canvas, main content is a single primary column, worker overview/queue now use `worker`/`workerRecord` as canonical local naming, queue unlock UI and sandbox preview both show the same pre-checkout bank/cardholder guidance, queue page now distinguishes `payment confirmed / activation pending` from a truly active 90-day matching window via the shared worker workspace-stage helper, queue return toasts verify real Stripe success only when `session_id` is present, and admin can inspect real worker data via `?inspect=<profile_id>` in read-only preview
-│   │   │   ├── employer/      # Canonical employer workspace in shared AppShell; `jobs*` routes redirect back into employer tabs, company/job content now lives in a single primary column without duplicate helper panels, admin can inspect real employer workspaces via `?inspect=<profile_id>`, and company identity now stays on the canonical `Tax ID + Registration No.` pair without the retired business-registry/APR field
+│   │   │   ├── worker/        # Worker workspace in shared AppShell with simplified `Overview / Documents / Queue / Support` language; overview no longer duplicates Documents/Queue/Support cards in the main canvas, main content is a single primary column, worker overview/queue now use `worker`/`workerRecord` as canonical local naming, queue unlock UI and sandbox preview both show the same pre-checkout bank/cardholder guidance, queue page now distinguishes `payment confirmed / activation pending` from a truly active 90-day matching window via the shared worker workspace-stage helper, queue return toasts verify real Stripe success only when `session_id` is present, match-thread inbox now lives at `/profile/worker/matches` and unlocks after `accepted offer + confirmation fee paid`, and admin can inspect real worker data via `?inspect=<profile_id>` in read-only preview
+│   │   │   ├── employer/      # Canonical employer workspace in shared AppShell; `jobs*` routes redirect back into employer tabs, company/job content now lives in a single primary column without duplicate helper panels, employer match inbox now lives at `/profile/employer/inbox`, admin can inspect real employer workspaces via `?inspect=<profile_id>`, and company identity now stays on the canonical `Tax ID + Registration No.` pair without the retired business-registry/APR field
 │   │   │   ├── agency/        # Agency dashboard + agency-owned worker detail/editor with near-full worker-profile parity; landing page is now a clean `Workers` table with header `Add worker` action, desktop modal intake, direct `Upload docs` entry from the Documents column, a dedicated desktop documents-only modal, and dedicated mobile full-page routes at `/profile/agency/workers/new` and `/profile/agency/workers/[id]/documents`, plus always-unlocked agency support at `/profile/agency/inbox`. Agency draft workers can upload/verify docs before claim through a hidden auth-backed document owner id stored in `worker_onboarding.application_data`, and still share the same `100% + admin approval -> payment unlock` rule as self-managed workers. Generic admin preview uses the same real layout in inspect-only mode, while both agency worker detail and the admin agency approval API now resolve readiness through the shared `worker-review` approval guard/action helpers instead of divergent local completion rules
 │   │   │   └── settings/      # GDPR: delete account, export data
 │   │   ├── admin/
@@ -87,7 +87,7 @@ Workers-United/
 │   │   │   ├── admin/         # delete-user, employer-status, funnel-metrics (now including payment-quality breakdown plus worker/billing-country issue signals), admin inbox support list, agency-worker approval API with truthful approval-email notification payloads, `admin-review` structured form actions that redirect with truthful re-upload email status, authenticated `send-campaign` outreach dispatch via `queueEmail()`, authenticated WhatsApp blast dispatch via the shared blast helper/strict payment-readiness gate, authenticated `/api/admin/whatsapp-thread-view` seen-state writes for the admin WhatsApp console, and same-origin document preview streaming with legacy image auto-rotation self-heal; manual-match/re-verify are now fully workerId-first
 │   │   │   ├── auth/          # hash-session finalize endpoint used by `/login` after Supabase email/magic-link/recovery redirects
 │   │   │   ├── agency/        # agency claim + agency-owned worker APIs (detail GET/PATCH + documents GET/upload)
-│   │   │   ├── conversations/ # in-platform messaging APIs (support thread bootstrap + message send/read)
+│   │   │   ├── conversations/ # in-platform messaging APIs (`support` thread bootstrap, `match` thread summaries, shared message send/read with anti-contact leakage guardrails)
 │   │   │   ├── cron/          # 10 cron jobs (see below); `brain-monitor` is now the deterministic ops-first daily sweep, reminder/expiry mailers now use the unified email queue, new `process-email-queue` picks up retryable pending email rows every 15 minutes, checkout-recovery step-3 abandonment now targets only the specific stale pending attempt id, and email-heavy crons no longer count/log queue failures as successful sends
 │   │   │   ├── documents/     # verify, verify-passport, request-review (fully workerId-first)
 │   │   │   ├── contracts/     # prepare, generate (DOCX documents)
@@ -110,6 +110,7 @@ Workers-United/
 │   ├── proxy.ts                # ← CSRF + auth guard (profile, admin, API routes)
 │   ├── components/
 │   │   ├── AppShell.tsx        # Layout wrapper (sidebar + navbar + content); worker/employer/agency/admin now share it, with simplified shared nav labels (`Overview`, `Queue`, `Support`, `New Job Request`), agency `Support` nav linked to `/profile/agency/inbox`, inspect-query preservation across admin previews, direct admin sidebar access to `/admin/whatsapp`, safe routing back to /admin, business-only admin navigation (no debug/incident links in the sidebar), a wider neutral dashboard canvas (`max-w-[1220px]`), and a stable desktop content frame so collapsing the sidebar no longer shifts the whole page left
+│   │   ├── profile/WorkspaceFrame.tsx # Shared profile-workspace shell primitives (`profileSurfaceClass`, `WorkspaceHero`, `WorkspaceMetricCard`) used by worker/employer/agency dashboards to keep hero/surface/metric treatment aligned
 │   │   ├── UnifiedNavbar.tsx   # Top navigation bar; non-public logo now routes to role dashboard and shows admin-preview badge when relevant
 │   │   ├── forms/AdaptiveSelect.tsx # Shared adaptive select: native `<select>` on mobile, modern custom popover/listbox on desktop, used across worker/employer/agency/admin forms and desktop calendar month/year controls
 │   │   ├── forms/PreferenceSheetField.tsx # Shared native-select preference helpers for worker/agency preference fields; keeps legacy `Any` storage compatibility while surfacing `All industries` / `All destinations` in the UI and allows shorter display labels (e.g. `Bosnia & Herzegovina`) without changing stored values
@@ -123,7 +124,7 @@ Workers-United/
 │   │   ├── ContactForm.tsx     # Contact form + AI auto-reply
 │   │   ├── CookieConsent.tsx   # GDPR cookie banner
 │   │   ├── AgencySetupRequired.tsx # Graceful setup-required card when agency migration is missing
-│   │   ├── messaging/         # Shared conversation thread UI, including the shared worker/agency support inbox client
+│   │   ├── messaging/         # Shared conversation thread UI for worker/agency support and worker/employer match inboxes
 │   │   ├── DocumentWizard.tsx  # Document upload flow; verify requests now send only canonical `workerId`, the diploma card explicitly asks for a final school/university/formal-vocational diploma, and the biometric-photo card now asks for a recent passport-style photo with a plain light background while skipping extra post-crop compression so sharpness is preserved
 │   │   ├── DocumentGenerator.tsx # Admin: generate 4 DOCX visa docs
 │   │   ├── SignaturePad.tsx    # Digital signature component
@@ -272,23 +273,25 @@ User (Browser)
 1. Worker or agency-managed worker completes the full profile + documents to 100% → case moves to `PENDING_APPROVAL`
 2. Admin approves the case (`APPROVED`) → only then does the `$9` Job Finder payment unlock
 3. Worker or agency clicks "Pay" → Stripe Checkout Session created (`/api/stripe/create-checkout`), while the pending payment row stores `deadline_at` and `metadata.checkout_started_at` for abandoned-checkout recovery + Brain metrics
-3. Agency-on-behalf payments target the claimed worker `profile_id`, while metadata preserves the paying agency profile and worker id
-4. Stripe redirects back → Webhook confirms payment (`/api/stripe/webhook`)
-5. Success redirect includes `session_id`; client can call `/api/stripe/confirm-session` as fallback if webhook is delayed
-6. Worker enters queue (`IN_QUEUE` status or preserved advanced status)
-7. Successful `$9` unlocks `/profile/worker/inbox`, where the worker can write only to Workers United support
-8. Cron job (`match-jobs`) attempts to match with employer requests
+4. Agency-on-behalf payments target the claimed worker `profile_id`, while metadata preserves the paying agency profile and worker id
+5. Stripe redirects back → Webhook confirms payment (`/api/stripe/webhook`)
+6. Success redirect includes `session_id`; client can call `/api/stripe/confirm-session` as fallback if webhook is delayed
+7. Worker enters queue (`IN_QUEUE` status or preserved advanced status)
+8. Successful `$9` unlocks `/profile/worker/inbox`, where the worker can write only to Workers United support
+9. Cron job (`match-jobs`) attempts to match with employer requests
+10. When an offer is `accepted` and the related confirmation fee is paid, the platform auto-creates/unlocks a `match` conversation for worker + employer (`/profile/worker/matches`, `/profile/employer/inbox`)
+11. Entry-fee checkout auto-heal logs `checkout_worker_auto_created` when it has to provision a missing canonical `worker_onboarding` row for an otherwise valid worker profile before opening Stripe
 
-9. Entry-fee checkout auto-heal logs `checkout_worker_auto_created` when it has to provision a missing canonical `worker_onboarding` row for an otherwise valid worker profile before opening Stripe
-
-### Messaging Flow (Support v1)
+### Messaging Flow (Support + Match v2)
 1. Supabase migration `20260306234500_messaging_foundation.sql` creates `conversations`, `conversation_participants`, `conversation_messages`, and `conversation_flags`
 2. Worker opens `/profile/worker/inbox` after a successful `$9` payment
 3. Agency opens `/profile/agency/inbox` at any time; agency support is always unlocked and does not depend on worker payment state
 4. `/api/conversations/support` checks the payment gate only for workers and auto-creates a single support thread per worker/employer/agency account on first access
-5. Worker/agency and admin exchange messages through `/api/conversations/[conversationId]/messages`
-6. Admin reads and replies from `/admin/inbox`; the admin dashboard and sidebar link there directly
-7. Contact information stays hidden; worker/employer direct chat is still future work and must unlock only after `accepted offer + placement fee paid`
+5. `/api/conversations/match` returns actor-scoped `match` thread summaries for worker/employer inboxes
+6. `src/lib/messaging.ts` auto-creates `match` conversations only after `accepted offer + confirmation fee paid` via `ensureMatchConversationForOffer()`
+7. Worker/agency/employer/admin exchange messages through `/api/conversations/[conversationId]/messages`
+8. `match` thread messages from non-admin actors are scanned for phone/email/external-link leakage; blocked sends are logged in `conversation_flags`, marked as moderation messages, and the conversation is moved to `waiting_on_support`
+9. Admin reads and replies from `/admin/inbox`; the admin inbox now includes both `support` and `match` threads with type badges
 
 ---
 
@@ -300,6 +303,7 @@ User (Browser)
 | `src/app/layout.tsx` | Root layout — loads Montserrat font, GodModeWrapper, CookieConsent |
 | `src/app/login/LoginClient.tsx` | Login/auth recovery screen — handles classic login, request-reset, password update, and Supabase hash-session finalize for confirm/magic-link/recovery links |
 | `src/components/AppShell.tsx` | Authenticated page wrapper — sidebar + navbar with role-specific navigation for worker/employer/agency/admin; admin preview mode shows a clear preview banner, preserves `?inspect=` across workspace nav, routes Dashboard back to `/admin`, exposes agency `Support` directly in the shared shell, keeps only `Back to Admin` plus the current role navigation inside preview workspaces, keeps business admin navigation free of debug/incident entries, and uses a wider neutral dashboard canvas |
+| `src/components/profile/WorkspaceFrame.tsx` | Shared worker/employer/agency workspace-shell primitives so all three profile dashboards render the same hero surface, section card shell, and metric-card treatment while preserving role-specific business logic |
 | `src/components/DocumentWizard.tsx` | Worker document upload flow; upload keys now pass through `sanitizeStorageFileName()` so camera-style filenames like `IMG_...~2.jpg` cannot break Supabase Storage with `Invalid key`, the UI resolves the canonical `worker-docs` bucket through a shared worker-first helper, the diploma card copy explicitly asks for a final school/university/formal-vocational diploma, and biometric-photo uploads keep their sharper processed output instead of being compressed twice |
 | `src/lib/worker-documents.ts` | Shared worker-first wrapper for the canonical `worker-docs` bucket, public URL builder, and canonical required-doc progress helper (`uploaded / verified / pending / rejected`) used to keep agency/admin counters aligned |
 | `src/lib/agency-draft-documents.ts` | Shared draft-document owner helper for agency-managed workers; ensures every draft document points to a real auth/profile id, stores that owner id in `worker_onboarding.application_data`, and relinks/cleans it up during claim |
@@ -309,8 +313,9 @@ User (Browser)
 | File | Role |
 |---|---|
 | `src/app/profile/worker/page.tsx` | Worker profile landing; supports read-only admin inspect of a real worker via `?inspect=<profile_id>` and loads worker data through the canonical worker helper instead of assuming a unique physical worker row |
-| `src/app/profile/worker/DashboardClient.tsx` | Clean worker overview surface with payment CTA/state and support unlock explanation; now uses a shared workspace-stage helper so advanced post-payment statuses no longer fall into the stale `Payment Received / activating your queue status` branch, while the sidebar remains the navigation source for Documents/Queue/Support/Edit |
+| `src/app/profile/worker/DashboardClient.tsx` | Clean worker overview surface with payment CTA/state and support unlock explanation; now renders hero and section shells through shared `WorkspaceFrame` primitives, and uses a shared workspace-stage helper so advanced post-payment statuses no longer fall into the stale `Payment Received / activating your queue status` branch, while the sidebar remains the navigation source for Documents/Queue/Support/Edit |
 | `src/app/profile/worker/inbox/page.tsx` | Worker support inbox route; now renders inside the shared `AppShell` instead of a standalone page |
+| `src/app/profile/worker/matches/page.tsx` | Worker match inbox route; lists unlocked worker↔employer match threads after accepted-offer confirmation payment |
 | `src/app/profile/worker/inbox/WorkerInboxClient.tsx` | Thin worker wrapper around the shared support inbox client; keeps worker-specific payment lock behavior |
 | `src/app/profile/worker/edit/` | Single-page profile edit form; app-layer state now uses `workerRecord` naming instead of local `candidate` aliases, while save path still reuses canonical worker lookup so an existing worker no longer inserts duplicate worker rows when drift already exists |
 | `src/app/profile/worker/documents/` | Document upload (passport, diploma, photo); the client flow now uses `workerProfileId` as the canonical prop for the worker document owner and verification/request-review payloads are fully workerId-first; also supports read-only admin inspect of the target worker documents |
@@ -329,6 +334,8 @@ User (Browser)
 | File | Role |
 |---|---|
 | `src/app/profile/employer/page.tsx` | Canonical employer workspace with tabs for company info, post-job form, and active jobs inside shared `AppShell`; sidebar remains the single navigation source for `New Job Request`, the jobs empty state no longer duplicates that CTA in the main canvas, and employer identity copy stays on the canonical `Tax ID / Registration No.` pair without the retired business-registry field; supports read-only admin inspect via `?inspect=<profile_id>` |
+| `src/app/profile/employer/EmployerProfileClient.tsx` | Employer dashboard client for company/job tabs; now reuses shared `WorkspaceFrame` hero/surface primitives so employer shell treatment matches worker/agency while preserving role-specific job request flows and save/update semantics |
+| `src/app/profile/employer/inbox/page.tsx` | Employer match inbox route; shows unlocked worker↔employer match threads after accepted-offer confirmation payment |
 | `src/app/profile/employer/jobs/` | Legacy redirect to `/profile/employer?tab=jobs` |
 | `src/app/profile/employer/jobs/new/` | Legacy redirect to `/profile/employer?tab=post-job` |
 
@@ -336,10 +343,11 @@ User (Browser)
 | File | Role |
 |---|---|
 | `src/app/profile/agency/page.tsx` | Agency workspace entry; loads real agency workers with the full `worker_onboarding` record before computing completion, supports generic admin structure preview without fake persisted drafts, keeps sandbox approval aligned with real `admin_approved`, and allows real agency inspect via `?inspect=<profile_id>` without role drift |
-| `src/app/profile/agency/AgencyDashboardClient.tsx` | Single-board agency dashboard: clean workers table, header search + the only `Add worker` CTA, desktop modal add/edit flow, mobile full-page `Add worker` routing, generic admin preview that uses the same real layout without local fake-data storage, and explicit document progress text under the docs CTA so operators can see uploaded-vs-verified state from the board |
+| `src/app/profile/agency/AgencyDashboardClient.tsx` | Single-board agency dashboard: clean workers table, header search + the only `Add worker` CTA, desktop modal add/edit flow, mobile full-page `Add worker` routing, generic admin preview that uses the same real layout without local fake-data storage, explicit document progress text under the docs CTA so operators can see uploaded-vs-verified state from the board, and shared `WorkspaceFrame` hero/surface primitives aligned with worker/employer shells |
 | `src/app/profile/agency/inbox/page.tsx` | Agency support inbox route; always unlocked for agencies, admin inspect stays read-only, and the page now reuses the shared `AppShell` workspace navigation |
 | `src/app/profile/agency/workers/new/page.tsx` | Mobile-first full-page agency worker create route; reuses the shared intake form, preserves admin inspect auth guards, and routes back to the agency dashboard after close/save |
 | `src/components/messaging/SupportInboxClient.tsx` | Shared worker/agency support inbox UI with audience-specific copy, locked states, admin preview mode, and the same neutral workspace styling used by dashboard surfaces |
+| `src/components/messaging/MatchInboxClient.tsx` | Shared worker/employer match inbox UI for unlocked match threads, including anti-contact leakage error handling on blocked sends |
 
 ### Admin / Data Surfaces
 | File | Role |
@@ -375,8 +383,8 @@ User (Browser)
 | `src/app/admin/review/ReviewClient.tsx` | Legacy manual-review queue UI; now opens exact approval/rejection `document_review_result` previews inline and uses the shared admin-review notification helper so `sent / queued / failed / skipped` toast copy stays truthful instead of collapsing queued mail into “No email was sent.” |
 | `src/lib/admin-review-notifications.ts` | Shared admin-review toast helper; maps `/api/admin/admin-review` delivery outcomes into truthful admin-safe `sent / queued / failed / skipped` toast copy so ReviewClient does not duplicate or drift from the route contract |
 | `src/app/admin/agencies/page.tsx` | Agency operations list with owner metadata, worker counts, and direct workspace inspect links |
-| `src/app/admin/inbox/page.tsx` | Admin support inbox page |
-| `src/app/admin/inbox/AdminInboxClient.tsx` | Client workspace for selecting and replying to support threads |
+| `src/app/admin/inbox/page.tsx` | Admin messaging inbox page (support + match threads) |
+| `src/app/admin/inbox/AdminInboxClient.tsx` | Client workspace for selecting and replying to support/match threads with conversation type badges |
 | `src/app/admin/workers/page.tsx` | Worker list with filter tabs plus inactivity-based cleanup countdowns derived from the shared retention helper instead of raw signup age |
 | `src/app/admin/workers/[id]/page.tsx` | Worker case surface with shared admin ops cards for profile snapshot, approvals, payments, contract payload, signature, and document review; image preview modals now include a manual crop tool plus `Restore original` backup recovery for fixing extra passport pages/margins without forcing a re-upload, document actions surface redirect-driven success/error banners plus direct approval/re-upload email preview links, and document delete/request flows are now owned by the canonical `/api/admin/admin-review` forms instead of duplicate page-level server actions |
 | `src/app/admin/queue/page.tsx` | Queue operations screen; canonical worker dedupe prevents duplicate worker rows from inflating queue counts, refund watch, or urgent countdowns |
@@ -410,7 +418,7 @@ User (Browser)
 | `src/lib/stripe-payment-finalization.ts` | Shared Stripe post-payment/failure helpers; centralizes canonical amount mapping, completed checkout payment upsert by `payment_id/session_id`, duplicate-insert recovery, metadata merge/update by payment/session reference (including pending-only checkout expiry updates), entry-fee worker queue activation, deduped `payment_success` email send, and canonical activity payload builders for both direct and agency-managed worker payment events |
 | `src/lib/payment-eligibility.ts` | Centralized entry-fee eligibility checks used by Stripe checkout API; `worker` is the canonical state name, with a legacy `EntryFeeCandidateState` alias kept for compatibility |
 | `src/lib/offer-checkout-copy.ts` | Shared worker offer-confirmation checkout copy so queue cards and offer pages use the same generic CTA/summary text instead of hardcoded placement amounts |
-| `src/lib/messaging.ts` | Messaging helpers for support access gates, support thread creation, participant access checks, message persistence, and admin summaries; worker payment gating now uses canonical `workerRecord` naming instead of legacy `candidate` locals, and worker inbox unlock stays open for already-activated `entry_fee_paid / job_search_active / queue_joined_at` workers |
+| `src/lib/messaging.ts` | Messaging helpers for support/match access gates, thread creation, participant access checks, message persistence, anti-contact leakage blocking/flagging for match threads, actor-scoped match summaries, and admin summaries across both support+match types; worker payment gating now uses canonical `workerRecord` naming instead of legacy `candidate` locals, and worker inbox unlock stays open for already-activated `entry_fee_paid / job_search_active / queue_joined_at` workers |
 | `src/lib/admin-exceptions.ts` | Shared technical exception snapshot helper used by the internal ops screens and the ops-first daily monitor; centralizes invalid-email, checkout drift, manual review, pending admin approval, worker readiness, queue/payment mismatch, open-demand-without-offers signals, and now a 24h WhatsApp quality snapshot (`guarded`, `language fallback`, `deterministic`, `auto handoff`, `media fallback`, `openai failure`) for `/internal/ops` |
 | `src/lib/ops-monitor.ts` | Deterministic ops monitor builder + email renderer; turns route health, `opsSnapshot`, WhatsApp confusion/platform failures, outbound WhatsApp message-log failures, document backlog/rejections, email hygiene, payment drift, auth drift, and 72h signup-funnel drop signals into a compact scored report |
 | `src/lib/whatsapp-quality.ts` | Shared WhatsApp quality helper layer; analyzes repeated confusion from live history, ignores both failed outbound rows and outbound template traffic so undelivered/proactive messages do not count as real assistant turns, drives truthful support auto-handoff thresholds in the webhook, and derives 24h quality metrics plus recent auto-handoff, reply-delivery-failure, and `whatsapp_message_log_failed` samples from `user_activity` |

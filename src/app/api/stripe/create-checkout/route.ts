@@ -16,6 +16,7 @@ import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
 import { buildStripeCheckoutPaymentMetadata, ensureStripeCheckoutCustomer } from "@/lib/stripe-checkout";
 import { findReusableStripeCheckoutPayment, markStripeCheckoutCreationFailed } from "@/lib/stripe-checkout-pending";
+import { deriveCheckoutEntrySource } from "@/lib/checkout-recovery-attribution";
 
 function normalizeRelativePath(value: unknown): string | null {
     if (typeof value !== "string") {
@@ -77,12 +78,14 @@ export async function POST(request: NextRequest) {
             targetWorkerId,
             successPath,
             cancelPath,
+            source,
         } = body as {
             type: PaymentType;
             offerId?: string;
             targetWorkerId?: string;
             successPath?: string;
             cancelPath?: string;
+            source?: string;
         };
 
         if (!type || !["entry_fee", "confirmation_fee"].includes(type)) {
@@ -519,6 +522,17 @@ export async function POST(request: NextRequest) {
             stripe_checkout_session_id: null,
             metadata: {
                 checkout_started_at: checkoutStartedAtIso,
+                checkout_opened_at: checkoutStartedAtIso,
+                checkout_entry_source: deriveCheckoutEntrySource({
+                    explicitSource: source || null,
+                    isAgencyCheckout: isAgencyPayingForWorker,
+                    successPath: normalizedSuccessPath,
+                    cancelPath: normalizedCancelPath,
+                }),
+                latest_funnel_stage: "checkout_opened",
+                latest_recovery_outcome: "skipped",
+                latest_recovery_step: null,
+                latest_recovery_at: checkoutStartedAtIso,
                 ...(offer ? { offer_id: offerId } : {}),
                 ...(isAgencyPayingForWorker
                     ? {

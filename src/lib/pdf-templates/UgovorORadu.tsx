@@ -166,11 +166,11 @@ export default function UgovorORadu({ data }: UgovorProps) {
                 <View style={s.articleRow}>
                     <View style={s.colLeft}>
                         <Text style={s.articleHeader}>Član 3 — Mesto rada</Text>
-                        <Text style={s.n}>3.1. Zaposleni će obavljati poslove na teritoriji {data.EMPLOYER_CITY}, a po potrebi poslodavca na teritoriji cele Srbije.</Text>
+                        <Text style={s.n}>3.1. Zaposleni će obavljati poslove na teritoriji {data.WORK_CITY_SR}, a po potrebi poslodavca na teritoriji cele Srbije.</Text>
                     </View>
                     <View style={s.colRight}>
                         <Text style={s.articleHeader}>Article 3 — Place of work</Text>
-                        <Text style={s.n}>3.1. The employee will perform tasks in the territory of the City of {data.EMPLOYER_CITY}, and if necessary by the employer, in the territory of the whole of Serbia.</Text>
+                        <Text style={s.n}>3.1. The employee will perform tasks in the territory of the City of {data.WORK_CITY_EN}, and if necessary by the employer, in the territory of the whole of Serbia.</Text>
                     </View>
                 </View>
 
@@ -212,13 +212,13 @@ export default function UgovorORadu({ data }: UgovorProps) {
                 <View style={s.articleRow}>
                     <View style={s.colLeft}>
                         <Text style={s.articleHeader}>Član 6 — Naknada za rad - Zarada</Text>
-                        <Text style={s.n}>6.1. Zaposlenom se utvrđuje zarada za poslove koje obavlja, koja ne može biti manja od minimalne zarade i to zarada zaposlenog utvrđena je u skladu sa zakonom u iznosu od RSD <Text style={s.bold}>{data.SALARY_RSD}</Text> neto mesečno, uvećano za pripadajuće poreze i doprinose.</Text>
+                        <Text style={s.n}>6.1. Zaposlenom se utvrđuje zarada za poslove koje obavlja, koja ne može biti manja od minimalne zarade i to zarada zaposlenog utvrđena je u skladu sa zakonom u iznosu od RSD <Text style={s.bold}>{data.SALARY_RSD}</Text> mesečno, uvećano za pripadajuće poreze i doprinose.</Text>
                         <Text style={s.n}>6.2. Zaposleni ima pravo na isplatu toplog obroka i pravo na isplatu regresa u skladu sa odlukom direktora.</Text>
                         <Text style={s.n}>6.3. Po osnovu radnog učinka, zarada može da se uveća odnosno umanji po oceni poslodavca. Zarada se isplaćuje u celosti do petog u tekućem mesecu za prethodni mesec.</Text>
                     </View>
                     <View style={s.colRight}>
                         <Text style={s.articleHeader}>Article 6 — Compensation for work - Salary</Text>
-                        <Text style={s.n}>6.1. The employee is entitled to a salary determined for performing his work duties, which can&apos;t be less than minimum wage, as follows: The employee&apos;s salary is determined in accordance with law in the amount of RSD <Text style={s.bold}>{data.SALARY_RSD}</Text> netto per month, increased by the amount of taxes and contributions thereon.</Text>
+                        <Text style={s.n}>6.1. The employee is entitled to a salary determined for performing his work duties, which can&apos;t be less than minimum wage, as follows: The employee&apos;s salary is determined in accordance with law in the amount of RSD <Text style={s.bold}>{data.SALARY_RSD}</Text> per month, increased by the amount of taxes and contributions thereon.</Text>
                         <Text style={s.n}>6.2. The employee is entitled to a refund of expenses for food during work and for subsidy for the use of annual leave in accordance with director&apos;s decisions.</Text>
                         <Text style={s.n}>6.3. Based on work performance, salary can be raised or reduced by the employer&apos;s evaluation. Salary is to be paid in full amount by the fifth of the current month for the previous month.</Text>
                     </View>

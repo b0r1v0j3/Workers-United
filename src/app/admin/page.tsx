@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import type { User as SupabaseAuthUser } from "@supabase/supabase-js";
 import {
     AlertTriangle, Building2, CheckCircle2, Clock,
-    Mail,
+    MessageSquareMore,
     ShieldCheck, TrendingUp, Users, Wallet
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
@@ -317,27 +317,53 @@ export default async function AdminDashboard() {
                     </Link>
                 </div>
 
-                <div className="rounded-[24px] border border-[#d9dced] bg-[#f7f9ff] p-5 shadow-[0_8px_24px_-16px_rgba(15,23,42,0.2)]">
-                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                        <div className="flex items-start gap-3">
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#111111] text-white shadow-sm">
-                                <Mail size={18} />
+                <div className="grid gap-4 xl:grid-cols-2">
+                    <div className="rounded-[24px] border border-[#d9dced] bg-[#f7f9ff] p-5 shadow-[0_8px_24px_-16px_rgba(15,23,42,0.2)]">
+                        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                            <div className="flex items-start gap-3">
+                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#111111] text-white shadow-sm">
+                                    <ShieldCheck size={18} />
+                                </div>
+                                <div>
+                                    <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6b7280]">Case navigation</div>
+                                    <h2 className="mt-1 text-lg font-semibold text-[#18181b]">Open worker cases with direct ops links</h2>
+                                    <p className="mt-1 max-w-2xl text-sm text-[#57534e]">
+                                        Use worker case pages for canonical jumps to queue, offers, payments, documents, and linked employer or agency workspaces.
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#6b7280]">Email Preview</div>
-                                <h2 className="mt-1 text-lg font-semibold text-[#18181b]">Open all system emails</h2>
-                                <p className="mt-1 max-w-2xl text-sm text-[#57534e]">
-                                    Pogledaj kako stvarno izgledaju worker, payment, document i offer mejlovi pre nego što ih pošalješ korisnicima.
-                                </p>
-                            </div>
+                            <Link
+                                href="/admin/workers"
+                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#111111] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#27272a]"
+                            >
+                                <ShieldCheck size={16} />
+                                Open Worker Cases
+                            </Link>
                         </div>
-                        <Link
-                            href="/admin/email-preview"
-                            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#111111] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#27272a]"
-                        >
-                            <Mail size={16} />
-                            Open Email Preview
-                        </Link>
+                    </div>
+
+                    <div className="rounded-[24px] border border-[#d8ece0] bg-[#f5fbf7] p-5 shadow-[0_8px_24px_-16px_rgba(15,23,42,0.2)]">
+                        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                            <div className="flex items-start gap-3">
+                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm">
+                                    <MessageSquareMore size={18} />
+                                </div>
+                                <div>
+                                    <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-700">WhatsApp Console</div>
+                                    <h2 className="mt-1 text-lg font-semibold text-[#18181b]">Open all WhatsApp conversations</h2>
+                                    <p className="mt-1 max-w-2xl text-sm text-[#57534e]">
+                                        Pregledaj sirove thread-ove, failed poruke i phone-linked razgovore bez kopanja po ops logovima ili pojedinačnim worker case-ovima.
+                                    </p>
+                                </div>
+                            </div>
+                            <Link
+                                href="/admin/whatsapp"
+                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
+                            >
+                                <MessageSquareMore size={16} />
+                                Open WhatsApp
+                            </Link>
+                        </div>
                     </div>
                 </div>
 
@@ -476,7 +502,7 @@ export default async function AdminDashboard() {
                             { href: "/admin/jobs", label: "Jobs" },
                             { href: "/admin/inbox", label: "Inbox" },
                             { href: "/admin/analytics", label: "Analytics" },
-                            { href: "/admin/email-preview", label: "Emails" },
+                            { href: "/admin/whatsapp", label: "WhatsApp" },
                             { href: "/admin/settings", label: "Settings" },
                         ].map((item) => (
                             <Link

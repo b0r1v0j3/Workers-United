@@ -4,6 +4,7 @@ import type { User as SupabaseAuthUser } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, getAllAuthUsers } from "@/lib/supabase/admin";
 import { isGodModeUser } from "@/lib/godmode";
+import { normalizeUserType } from "@/lib/domain";
 import AppShell from "@/components/AppShell";
 import { BadgeCheck, Hourglass, ListOrdered, Users } from "lucide-react";
 import { getWorkerCompletion } from "@/lib/profile-completion";
@@ -99,7 +100,9 @@ export default async function WorkersPage({ searchParams }: { searchParams: Prom
         .eq("id", user.id)
         .single();
 
-    if (profile?.user_type !== 'admin' && !isOwner) {
+    const profileType = normalizeUserType(profile?.user_type);
+    const metadataType = normalizeUserType(user.user_metadata?.user_type);
+    if (profileType !== "admin" && metadataType !== "admin" && !isOwner) {
         redirect("/profile");
     }
 

@@ -3,10 +3,11 @@ import type { Database, Tables, TablesInsert } from "@/lib/database.types";
 import { loadCanonicalWorkerRecord } from "@/lib/workers";
 import { isPostEntryFeeWorkerStatus } from "@/lib/worker-status";
 
-type AdminClient = SupabaseClient<Database>;
+type AdminClient = Pick<SupabaseClient<Database>, "from">;
 
 export type MessagingActorRole = "worker" | "employer" | "agency" | "admin";
 export type SupportConversationRole = Exclude<MessagingActorRole, "admin">;
+export type MatchConversationActorRole = Extract<MessagingActorRole, "worker" | "employer">;
 
 export type ConversationRow = Tables<"conversations">;
 export type ConversationMessageRow = Tables<"conversation_messages">;
@@ -42,9 +43,34 @@ export interface SupportConversationSummary {
     lastMessagePreview: string | null;
 }
 
+export interface MatchConversationSummary {
+    id: string;
+    status: ConversationRow["status"];
+    offerId: string | null;
+    matchId: string | null;
+    otherParticipantName: string;
+    otherParticipantEmail: string | null;
+    createdAt: string;
+    lastMessageAt: string | null;
+    lastMessagePreview: string | null;
+}
+
 const COMPLETED_PAYMENT_STATUSES = ["completed", "paid"] as const;
 const MAX_MESSAGE_LENGTH = 2000;
 const MAX_MESSAGE_LIST = 200;
+const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
+const EXTERNAL_LINK_PATTERN = /(https?:\/\/|www\.|wa\.me\/|t\.me\/|telegram\.me\/|instagram\.com\/|facebook\.com\/|linkedin\.com\/)/i;
+const PHONE_PATTERN = /(?:\+?\d[\d\s().-]{7,}\d)/g;
+
+const CONTACT_LEAKAGE_WARNING =
+    "Direct contact details are blocked in match messaging. Keep communication inside Workers United.";
+
+export class ConversationMessageBlockedError extends Error {
+    constructor(message = CONTACT_LEAKAGE_WARNING) {
+        super(message);
+        this.name = "ConversationMessageBlockedError";
+    }
+}
 
 function getSupportActorColumn(role: SupportConversationRole): "worker_profile_id" | "employer_profile_id" | "agency_profile_id" {
     switch (role) {
@@ -233,6 +259,65 @@ export async function getSupportAccessState(
     };
 }
 
+function extractPhoneDigits(value: string): string {
+    return value.replace(/\D/g, "");
+}
+
+export function detectContactLeakageFlags(messageBody: string): Array<"phone" | "email" | "external_link" | "off_platform_attempt"> {
+    const normalized = messageBody.trim();
+    if (!normalized) {
+        return [];
+    }
+
+    const flags = new Set<"phone" | "email" | "external_link" | "off_platform_attempt">();
+
+    if (EMAIL_PATTERN.test(normalized)) {
+        flags.add("email");
+    }
+
+    if (EXTERNAL_LINK_PATTERN.test(normalized)) {
+        flags.add("external_link");
+    }
+
+    const phoneMatches = normalized.match(PHONE_PATTERN) || [];
+    const hasLikelyPhone = phoneMatches.some((candidate) => {
+        const digits = extractPhoneDigits(candidate);
+        return digits.length >= 8 && digits.length <= 16;
+    });
+
+    if (hasLikelyPhone) {
+        flags.add("phone");
+    }
+
+    if (flags.size > 0) {
+        flags.add("off_platform_attempt");
+    }
+
+    return Array.from(flags);
+}
+
+async function insertConversationFlags(
+    admin: AdminClient,
+    conversationId: string,
+    messageId: string,
+    flags: string[]
+) {
+    if (flags.length === 0) {
+        return;
+    }
+
+    const payload = flags.map((flag) => ({
+        conversation_id: conversationId,
+        message_id: messageId,
+        flag_type: flag,
+    }));
+
+    const { error } = await admin.from("conversation_flags").insert(payload);
+    if (error) {
+        throw error;
+    }
+}
+
 export async function ensureSupportConversation(
     admin: AdminClient,
     profileId: string,
@@ -408,6 +493,15 @@ export async function appendConversationMessage(
     }
 
     const senderRole = getSenderRole(role);
+    const leakageFlags =
+        conversation.type === "match" && senderRole !== "admin" && senderRole !== "support"
+            ? detectContactLeakageFlags(normalizedBody)
+            : [];
+    const isBlockedByLeakage = leakageFlags.length > 0;
+    const messageBody = isBlockedByLeakage
+        ? "[Message blocked: direct contact details are not allowed. Keep communication inside Workers United.]"
+        : normalizedBody;
+
     const { data: insertedMessage, error: insertError } = await admin
         .from("conversation_messages")
         .insert({
@@ -415,8 +509,8 @@ export async function appendConversationMessage(
             sender_profile_id: actorProfileId,
             sender_role: senderRole,
             message_type: "text",
-            moderation_status: "clean",
-            body: normalizedBody,
+            moderation_status: isBlockedByLeakage ? "blocked" : "clean",
+            body: messageBody,
         })
         .select("*")
         .single();
@@ -425,7 +519,13 @@ export async function appendConversationMessage(
         throw insertError;
     }
 
-    const conversationStatus = resolveConversationStatusAfterReply(conversation, senderRole);
+    if (isBlockedByLeakage) {
+        await insertConversationFlags(admin, conversation.id, insertedMessage.id, leakageFlags);
+    }
+
+    const conversationStatus = isBlockedByLeakage
+        ? "waiting_on_support"
+        : resolveConversationStatusAfterReply(conversation, senderRole);
     const timestamp = insertedMessage.created_at || new Date().toISOString();
     const { error: conversationUpdateError } = await admin
         .from("conversations")
@@ -444,19 +544,260 @@ export async function appendConversationMessage(
         await markConversationRead(admin, conversation.id, actorProfileId);
     }
 
+    if (isBlockedByLeakage) {
+        throw new ConversationMessageBlockedError();
+    }
+
     return {
         message: insertedMessage as ConversationMessageRow,
         conversationStatus,
     };
 }
 
-export async function listSupportConversationSummaries(
-    admin: AdminClient
+async function hasCompletedConfirmationFeePaymentForOffer(
+    admin: AdminClient,
+    offerId: string
+): Promise<boolean> {
+    const { data, error } = await admin
+        .from("payments")
+        .select("id")
+        .eq("payment_type", "confirmation_fee")
+        .in("status", [...COMPLETED_PAYMENT_STATUSES])
+        .contains("metadata", { offer_id: offerId })
+        .limit(1)
+        .maybeSingle();
+
+    if (error) {
+        throw error;
+    }
+
+    return !!data?.id;
+}
+
+async function ensureMatchConversationParticipants(
+    admin: AdminClient,
+    conversationId: string,
+    workerProfileId: string,
+    employerProfileId: string
+) {
+    await ensureConversationParticipant(admin, conversationId, workerProfileId, "worker");
+    await ensureConversationParticipant(admin, conversationId, employerProfileId, "employer");
+}
+
+export async function ensureMatchConversationForOffer(
+    admin: AdminClient,
+    params: {
+        offerId: string;
+        workerProfileId: string;
+        createdByProfileId?: string;
+    }
+): Promise<ConversationRow | null> {
+    const { data: offer, error: offerError } = await admin
+        .from("offers")
+        .select("id, status, job_request_id, worker_id")
+        .eq("id", params.offerId)
+        .maybeSingle();
+
+    if (offerError) {
+        throw offerError;
+    }
+
+    if (!offer || offer.status !== "accepted" || !offer.job_request_id) {
+        return null;
+    }
+
+    const paymentCompleted = await hasCompletedConfirmationFeePaymentForOffer(admin, params.offerId);
+    if (!paymentCompleted) {
+        return null;
+    }
+
+    const { data: jobRequest, error: jobRequestError } = await admin
+        .from("job_requests")
+        .select("id, employer_id")
+        .eq("id", offer.job_request_id)
+        .maybeSingle();
+
+    if (jobRequestError) {
+        throw jobRequestError;
+    }
+
+    if (!jobRequest?.employer_id) {
+        return null;
+    }
+
+    const { data: employer, error: employerError } = await admin
+        .from("employers")
+        .select("id, profile_id")
+        .eq("id", jobRequest.employer_id)
+        .maybeSingle();
+
+    if (employerError) {
+        throw employerError;
+    }
+
+    if (!employer?.profile_id) {
+        return null;
+    }
+
+    const { data: existingConversation, error: existingConversationError } = await admin
+        .from("conversations")
+        .select("*")
+        .eq("type", "match")
+        .eq("offer_id", params.offerId)
+        .limit(1)
+        .maybeSingle();
+
+    if (existingConversationError) {
+        throw existingConversationError;
+    }
+
+    if (existingConversation) {
+        if (!existingConversation.unlocked_at) {
+            const { error: unlockError } = await admin
+                .from("conversations")
+                .update({ unlocked_at: new Date().toISOString() })
+                .eq("id", existingConversation.id);
+
+            if (unlockError) {
+                throw unlockError;
+            }
+        }
+
+        await ensureMatchConversationParticipants(
+            admin,
+            existingConversation.id,
+            params.workerProfileId,
+            employer.profile_id
+        );
+        return existingConversation as ConversationRow;
+    }
+
+    const insertedConversationPayload: TablesInsert<"conversations"> = {
+        type: "match",
+        status: "open",
+        worker_profile_id: params.workerProfileId,
+        employer_profile_id: employer.profile_id,
+        offer_id: params.offerId,
+        match_id: null,
+        created_by_profile_id: params.createdByProfileId || params.workerProfileId,
+        unlocked_at: new Date().toISOString(),
+    };
+
+    const { data: createdConversation, error: createdConversationError } = await admin
+        .from("conversations")
+        .insert(insertedConversationPayload)
+        .select("*")
+        .single();
+
+    if (createdConversationError) {
+        throw createdConversationError;
+    }
+
+    await ensureMatchConversationParticipants(
+        admin,
+        createdConversation.id,
+        params.workerProfileId,
+        employer.profile_id
+    );
+
+    return createdConversation as ConversationRow;
+}
+
+export async function listMatchConversationSummariesForActor(
+    admin: AdminClient,
+    profileId: string,
+    role: MatchConversationActorRole
+): Promise<MatchConversationSummary[]> {
+    const actorColumn = role === "worker" ? "worker_profile_id" : "employer_profile_id";
+    const oppositeColumn = role === "worker" ? "employer_profile_id" : "worker_profile_id";
+
+    const { data: conversations, error: conversationError } = await admin
+        .from("conversations")
+        .select("*")
+        .eq("type", "match")
+        .eq(actorColumn, profileId)
+        .order("last_message_at", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false });
+
+    if (conversationError) {
+        throw conversationError;
+    }
+
+    if (!conversations?.length) {
+        return [];
+    }
+
+    const oppositeProfileIds = Array.from(
+        new Set(
+            conversations
+                .map((conversation) => conversation[oppositeColumn as keyof typeof conversation])
+                .filter((value): value is string => typeof value === "string" && value.length > 0)
+        )
+    );
+
+    const { data: oppositeProfiles, error: oppositeProfilesError } = oppositeProfileIds.length
+        ? await admin
+            .from("profiles")
+            .select("id, full_name, email")
+            .in("id", oppositeProfileIds)
+        : { data: [] as ProfileRow[], error: null };
+
+    if (oppositeProfilesError) {
+        throw oppositeProfilesError;
+    }
+
+    const profileMap = new Map((oppositeProfiles || []).map((profile) => [profile.id, profile]));
+
+    const conversationIds = conversations.map((conversation) => conversation.id);
+    const { data: allMessages, error: allMessagesError } = await admin
+        .from("conversation_messages")
+        .select("conversation_id, body, created_at")
+        .in("conversation_id", conversationIds)
+        .order("created_at", { ascending: false });
+
+    if (allMessagesError) {
+        throw allMessagesError;
+    }
+
+    const latestMessageMap = new Map<string, { body: string; created_at: string }>();
+    for (const message of allMessages || []) {
+        if (!latestMessageMap.has(message.conversation_id)) {
+            latestMessageMap.set(message.conversation_id, {
+                body: message.body,
+                created_at: message.created_at,
+            });
+        }
+    }
+
+    return conversations.map((conversation) => {
+        const oppositeProfileId = conversation[oppositeColumn as keyof typeof conversation];
+        const oppositeProfile = typeof oppositeProfileId === "string"
+            ? profileMap.get(oppositeProfileId)
+            : null;
+        const latestMessage = latestMessageMap.get(conversation.id);
+
+        return {
+            id: conversation.id,
+            status: conversation.status,
+            offerId: conversation.offer_id,
+            matchId: conversation.match_id,
+            otherParticipantName: oppositeProfile?.full_name || oppositeProfile?.email || "Match participant",
+            otherParticipantEmail: oppositeProfile?.email || null,
+            createdAt: conversation.created_at,
+            lastMessageAt: conversation.last_message_at || latestMessage?.created_at || null,
+            lastMessagePreview: latestMessage ? getMessagePreview(latestMessage.body) : null,
+        };
+    });
+}
+
+async function listConversationSummariesByTypes(
+    admin: AdminClient,
+    types: ConversationRow["type"][]
 ): Promise<SupportConversationSummary[]> {
     const { data: conversations, error: conversationError } = await admin
         .from("conversations")
         .select("*")
-        .eq("type", "support")
+        .in("type", types)
         .order("last_message_at", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false });
 
@@ -530,4 +871,16 @@ export async function listSupportConversationSummaries(
             lastMessagePreview: latestMessage ? getMessagePreview(latestMessage.body) : null,
         };
     });
+}
+
+export async function listSupportConversationSummaries(
+    admin: AdminClient
+): Promise<SupportConversationSummary[]> {
+    return listConversationSummariesByTypes(admin, ["support"]);
+}
+
+export async function listAdminConversationSummaries(
+    admin: AdminClient
+): Promise<SupportConversationSummary[]> {
+    return listConversationSummariesByTypes(admin, ["support", "match"]);
 }

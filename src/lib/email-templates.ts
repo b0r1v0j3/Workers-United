@@ -72,6 +72,12 @@ export interface TemplateData {
     isEmployer?: boolean;
     recoveryStep?: number;
     paymentId?: string;
+    checkoutEntrySource?: string;
+    checkoutOpenedAt?: string;
+    latestFunnelStage?: string;
+    latestRecoveryOutcome?: string;
+    latestRecoveryStep?: number | null;
+    latestRecoveryAt?: string;
     // Document review
     approved?: boolean;
     docType?: string;

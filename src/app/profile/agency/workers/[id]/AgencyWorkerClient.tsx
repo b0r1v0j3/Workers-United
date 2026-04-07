@@ -395,7 +395,13 @@ export default function AgencyWorkerClient({
             const response = await fetch("/api/stripe/create-checkout", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ type: "entry_fee", targetWorkerId: initialWorker.id, successPath: workerPath, cancelPath: workerPath }),
+                body: JSON.stringify({
+                    type: "entry_fee",
+                    targetWorkerId: initialWorker.id,
+                    successPath: workerPath,
+                    cancelPath: workerPath,
+                    source: "agency_worker_profile",
+                }),
             });
             const data = await response.json();
             if (!response.ok || !data.checkoutUrl) throw new Error(data.error || "Failed to create checkout session.");

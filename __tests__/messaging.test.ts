@@ -93,3 +93,25 @@ describe("getSupportAccessState", () => {
         expect(state.reason).toContain("admin approval");
     });
 });
+
+describe("detectContactLeakageFlags", () => {
+    it("flags direct contact details and off-platform attempts", async () => {
+        const { detectContactLeakageFlags } = await import("@/lib/messaging");
+        const flags = detectContactLeakageFlags(
+            "You can reach me at +381 64 123 4567, ivan@example.com, or https://wa.me/381641234567"
+        );
+
+        expect(flags).toEqual(
+            expect.arrayContaining(["phone", "email", "external_link", "off_platform_attempt"])
+        );
+    });
+
+    it("keeps operational messages clean when they contain no contact details", async () => {
+        const { detectContactLeakageFlags } = await import("@/lib/messaging");
+        const flags = detectContactLeakageFlags(
+            "We can start onboarding on Monday after the document review is complete."
+        );
+
+        expect(flags).toEqual([]);
+    });
+});
