@@ -8,6 +8,7 @@ const saveBrainFactsDedup = vi.fn();
 const persistWhatsAppDeliveryStatuses = vi.fn();
 const attachInboundWhatsAppMessageUser = vi.fn();
 const extractWhatsAppMessageContent = vi.fn();
+const extractWhatsAppMediaId = vi.fn();
 const isTextLikeWhatsAppMessage = vi.fn();
 const normalizeWhatsAppPhone = vi.fn();
 const recordInboundWhatsAppMessage = vi.fn();
@@ -20,6 +21,7 @@ const generateEmployerWhatsAppReply = vi.fn();
 const handleWhatsAppAdminCommand = vi.fn();
 const callOpenAIResponseText = vi.fn();
 const callClaudeResponseText = vi.fn();
+const downloadWhatsAppMedia = vi.fn();
 const mutableEnv = process.env as Record<string, string | undefined>;
 
 vi.mock("@/lib/supabase/admin", () => ({
@@ -45,7 +47,7 @@ vi.mock("@/lib/whatsapp-status-events", () => ({
 vi.mock("@/lib/whatsapp-inbound-events", () => ({
     attachInboundWhatsAppMessageUser,
     extractWhatsAppMessageContent,
-    extractWhatsAppMediaId: vi.fn(() => null),
+    extractWhatsAppMediaId,
     isTextLikeWhatsAppMessage,
     looksLikeAutomatedWhatsAppAutoReply: vi.fn((messageType: string, content: string) => {
         if (messageType !== "text" && messageType !== "button" && messageType !== "interactive") {
@@ -60,6 +62,7 @@ vi.mock("@/lib/whatsapp-inbound-events", () => ({
 vi.mock("@/lib/whatsapp-media", () => ({
     isAudioWhatsAppMessage: vi.fn(() => false),
     isImageWhatsAppMessage: vi.fn(() => false),
+    downloadWhatsAppMedia,
     transcribeWhatsAppAudio: vi.fn(),
     analyzeWhatsAppImage: vi.fn(),
 }));
@@ -124,6 +127,7 @@ describe("POST /api/whatsapp/webhook", () => {
         persistWhatsAppDeliveryStatuses.mockResolvedValue(0);
         attachInboundWhatsAppMessageUser.mockResolvedValue(undefined);
         extractWhatsAppMessageContent.mockImplementation((message: { text?: { body?: string } }) => message.text?.body || "");
+        extractWhatsAppMediaId.mockReturnValue(null);
         isTextLikeWhatsAppMessage.mockReturnValue(true);
         normalizeWhatsAppPhone.mockImplementation((phone: string | null | undefined) => {
             if (!phone) {
@@ -145,6 +149,7 @@ describe("POST /api/whatsapp/webhook", () => {
         handleWhatsAppAdminCommand.mockResolvedValue({ handled: false, replySent: false });
         callOpenAIResponseText.mockResolvedValue("AI fallback reply");
         callClaudeResponseText.mockResolvedValue("Claude conversational reply");
+        downloadWhatsAppMedia.mockResolvedValue({ buffer: Buffer.from("test"), mimeType: "image/jpeg" });
     });
 
     it("fails closed when META_APP_SECRET is missing in production", async () => {
@@ -619,6 +624,47 @@ describe("POST /api/whatsapp/webhook", () => {
             expect.stringContaining("j’ai bien reçu la pièce jointe"),
             undefined
         );
+    }, 15000);
+
+    it("does not treat unlinked document messages as worker document uploads", async () => {
+        isTextLikeWhatsAppMessage.mockReturnValue(false);
+        extractWhatsAppMessageContent.mockReturnValue("");
+        extractWhatsAppMediaId.mockReturnValue("doc_1");
+
+        const { POST } = await import("@/app/api/whatsapp/webhook/route");
+        const request = new NextRequest("http://localhost/api/whatsapp/webhook", {
+            method: "POST",
+            body: JSON.stringify({
+                entry: [{
+                    changes: [{
+                        value: {
+                            messages: [
+                                {
+                                    id: "wamid_doc_unlinked",
+                                    from: "381600000050",
+                                    type: "document",
+                                    document: {
+                                        id: "doc_1",
+                                        filename: "passport.pdf",
+                                        mime_type: "application/pdf",
+                                        caption: "passport",
+                                    },
+                                },
+                            ],
+                        },
+                    }],
+                }],
+            }),
+        });
+
+        const response = await POST(request);
+        const payload = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(payload).toEqual({ status: "ok" });
+        expect(downloadWhatsAppMedia).not.toHaveBeenCalled();
+        expect(sendWhatsAppText).toHaveBeenCalledOnce();
+        expect(sendWhatsAppText.mock.calls[0]?.[1]).not.toContain("only after this number is linked");
     }, 15000);
 
     it("suppresses obvious inbound autoresponder texts instead of replying to them", async () => {

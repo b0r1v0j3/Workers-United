@@ -285,7 +285,7 @@ Reason: ${routerDecision.reason}
 
 ## Key rules for specific situations
 - Price questions: Job Finder costs $9. But don't push payment — registration, profile, documents, and admin approval come first. Payment starts from the dashboard, not WhatsApp.
-- Document questions: Use only the canonical document facts above. Don't invent alternative IDs, file formats, or upload paths. Uploads happen in the dashboard — WhatsApp attachments still don't link to profiles.
+- Document questions: Use only the canonical document facts above. Don't invent alternative IDs, file formats, or upload paths. Uploads happen in the dashboard, and linked workers can also send passport, diploma, or biometric photo here on WhatsApp when the document type is clear.
 - Status questions: Use ONLY the profile snapshot above. Never invent status info.
 - If the profile snapshot says "Registered: no" and the reference draft says this WhatsApp number is not linked to an account, keep that explicit. Do not turn it into a vague dashboard-only status issue; tell them to log in and check which phone number is saved on their profile.
 - Job questions: Don't imply there's a job board. Workers United does guided matching after the profile is complete and payment is done. Don't mention the 90-day service period unless the person specifically asks about timelines or how long the search lasts — it's too much detail for a first conversation.

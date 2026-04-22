@@ -29,6 +29,12 @@ export interface WhatsAppInboundMessage {
         mime_type?: string | null;
         caption?: string | null;
     } | null;
+    document?: {
+        id?: string | null;
+        mime_type?: string | null;
+        filename?: string | null;
+        caption?: string | null;
+    } | null;
 }
 
 const TEXT_LIKE_MESSAGE_TYPES = new Set(["text", "button", "interactive"]);
@@ -141,6 +147,9 @@ export function extractWhatsAppMediaId(message: WhatsAppInboundMessage): string 
     }
     if (messageType === "image" && message.image?.id) {
         return message.image.id;
+    }
+    if (messageType === "document" && message.document?.id) {
+        return message.document.id;
     }
 
     return null;

@@ -57,6 +57,12 @@ import {
     transcribeWhatsAppAudio,
     analyzeWhatsAppImage,
 } from "@/lib/whatsapp-media";
+import {
+    buildWhatsAppDocumentUploadReply,
+    saveWhatsAppWorkerDocumentFromMedia,
+    type WhatsAppImageAnalysisSnapshot,
+    type WhatsAppWorkerDocumentUploadResult,
+} from "@/lib/whatsapp-document-upload";
 import { resolveWhatsAppWorkerIdentity } from "@/lib/whatsapp-identity";
 import { callOpenAIResponseText } from "@/lib/openai-response-text";
 import { callClaudeResponseText } from "@/lib/claude-response-text";
@@ -864,6 +870,57 @@ export async function POST(request: NextRequest) {
 
                 if (!isTextLikeWhatsAppMessage(messageType)) {
                     const mediaId = extractWhatsAppMediaId(message);
+                    const sendWorkerDocumentUploadReply = async (
+                        uploadResult: WhatsAppWorkerDocumentUploadResult
+                    ) => {
+                        if (!uploadResult.handled) {
+                            return false;
+                        }
+
+                        const uploadReply = buildWhatsAppDocumentUploadReply(uploadResult, latestMessageLanguage);
+                        const uploadReplyResult = await sendWhatsAppRouteReply({
+                            admin: supabase,
+                            phone: normalizedPhone,
+                            text: uploadReply,
+                            userId: activityUserId || undefined,
+                            activityUserId,
+                            supportRole,
+                            failureContext: "worker_document_upload_reply",
+                        });
+                        if (!uploadReplyResult.success && uploadReplyResult.retryable) {
+                            hadProcessingError = true;
+                        }
+
+                        const activityPayload = {
+                            phone: normalizedPhone,
+                            message_type: messageType,
+                            upload_status: uploadResult.status,
+                            doc_type: uploadResult.docType || null,
+                            mime_type: uploadResult.mimeType || null,
+                            size_bytes: uploadResult.sizeBytes || null,
+                            storage_path: uploadResult.status === "saved" ? uploadResult.storagePath : null,
+                            error: uploadResult.status === "upload_failed" ? uploadResult.error || null : null,
+                        };
+
+                        if (uploadResult.status === "saved") {
+                            await logServerActivity(
+                                activityUserId || null,
+                                "whatsapp_worker_document_saved",
+                                "documents",
+                                activityPayload
+                            );
+                        } else {
+                            await logServerActivity(
+                                activityUserId || null,
+                                "whatsapp_worker_document_upload_not_saved",
+                                "documents",
+                                activityPayload,
+                                "warning"
+                            );
+                        }
+
+                        return true;
+                    };
 
                     // ─── Voice/Audio → Transcribe with OpenAI Whisper then process as text ───
                     if (isAudioWhatsAppMessage(messageType) && mediaId && OPENAI_API_KEY_ENV) {
@@ -890,11 +947,37 @@ export async function POST(request: NextRequest) {
                         }
                     }
 
+                    // ─── WhatsApp document/PDF → Save to worker_documents when linked ───
+                    if (linkedWorkerRecord && messageType === "document" && mediaId) {
+                        const uploadResult = await saveWhatsAppWorkerDocumentFromMedia({
+                            admin: supabase,
+                            mediaId,
+                            workerProfileId: linkedWorkerRecord.profile_id,
+                            workerRecordId: linkedWorkerRecord.id,
+                            normalizedPhone,
+                            messageType,
+                            caption: message.document?.caption || null,
+                            fileName: message.document?.filename || null,
+                            declaredMimeType: message.document?.mime_type || null,
+                        });
+
+                        if (await sendWorkerDocumentUploadReply(uploadResult)) {
+                            continue;
+                        }
+                    }
+
                     // ─── Image → Analyze with Claude Vision ───
+                    let imageAnalysisForUpload: WhatsAppImageAnalysisSnapshot | null = null;
                     if (isImageWhatsAppMessage(messageType) && mediaId && ANTHROPIC_API_KEY) {
                         try {
                             const analysis = await analyzeWhatsAppImage(ANTHROPIC_API_KEY, mediaId);
                             const caption = message.image?.caption || "";
+                            imageAnalysisForUpload = {
+                                isDocument: analysis.isDocument,
+                                documentType: analysis.documentType,
+                                extractedText: analysis.extractedText,
+                                description: analysis.description,
+                            };
                             if (analysis.isDocument) {
                                 // Document detected — create text summary for AI processing
                                 content = `[Image: ${analysis.documentType || "document"}] ${analysis.extractedText}${caption ? `\nCaption: ${caption}` : ""}`;
@@ -927,6 +1010,25 @@ export async function POST(request: NextRequest) {
                         } catch (imageError) {
                             console.error("[WhatsApp] Image analysis failed:", imageError instanceof Error ? imageError.message : imageError);
                             // Fall through to generic media fallback
+                        }
+                    }
+
+                    if (linkedWorkerRecord && isImageWhatsAppMessage(messageType) && mediaId) {
+                        const uploadResult = await saveWhatsAppWorkerDocumentFromMedia({
+                            admin: supabase,
+                            mediaId,
+                            workerProfileId: linkedWorkerRecord.profile_id,
+                            workerRecordId: linkedWorkerRecord.id,
+                            normalizedPhone,
+                            messageType,
+                            caption: message.image?.caption || null,
+                            fileName: null,
+                            declaredMimeType: message.image?.mime_type || null,
+                            imageAnalysis: imageAnalysisForUpload,
+                        });
+
+                        if (await sendWorkerDocumentUploadReply(uploadResult)) {
+                            continue;
                         }
                     }
 
