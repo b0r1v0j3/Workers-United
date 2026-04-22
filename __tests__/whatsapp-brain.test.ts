@@ -38,7 +38,7 @@ describe("whatsapp-brain guards", () => {
         expect(facts).toContain("works through guided matching");
         expect(facts).toContain("There is no live public vacancy feed");
         expect(facts).toContain("payment unlocks only after the worker profile is fully complete, the required documents are finished, and admin approval is done");
-        expect(facts).toContain("Document uploads and screenshots are not processed as WhatsApp attachments yet");
+        expect(facts).toContain("save worker passport/diploma/biometric-photo attachments");
         expect(facts).toContain("A valid passport is required for international employment and work-permit processing");
         expect(facts).toContain("encrypted cloud storage");
     });
@@ -75,7 +75,7 @@ describe("whatsapp-brain guards", () => {
 
         expect(rules).toContain("Do NOT share direct payment links from WhatsApp");
         expect(rules).toContain("Never claim you escalated, forwarded screenshots, opened a ticket");
-        expect(rules).toContain("uploads happen in the dashboard");
+        expect(rules).toContain("linked workers can also send passport, diploma, or biometric photo");
     });
 
     it("keeps only low-risk self-improvement learnings", () => {
@@ -379,7 +379,7 @@ describe("whatsapp-brain guards", () => {
         });
 
         expect(reply).toContain("Passport and formal diploma can be uploaded as a clear image or PDF file");
-        expect(reply).toContain("The biometric photo should be uploaded as a clear image file, not as a PDF");
+        expect(reply).toContain("The biometric photo should be a clear image file, not a PDF");
         expect(reply).toContain("/signup");
         expect(reply).toContain("contact@workersunited.eu");
     });
@@ -593,7 +593,7 @@ describe("whatsapp-brain guards", () => {
 
         expect(reply).toContain("Passport and formal diploma can be uploaded as a clear image or PDF file");
         expect(reply).toContain("/profile/worker");
-        expect(reply).toContain("not as a PDF");
+        expect(reply).toContain("not a PDF");
         expect(reply).toContain("contact@workersunited.eu");
     });
 

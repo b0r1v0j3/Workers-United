@@ -112,22 +112,22 @@ export function getMediaAttachmentResponse(language: string, platform?: Guardrai
     const guardrailLanguage = resolveGuardrailLanguage(language);
     const { supportEmail } = resolveGuardrailPlatformContact(platform);
     if (guardrailLanguage === "sr") {
-        return `Hvala — vidim da ste poslali prilog. WhatsApp slike i dokumenti se trenutno ne vezuju automatski za profil, zato dokumenta i screenshot-ove pošaljite kroz dashboard ili na ${supportEmail}, uz kratko objašnjenje problema.`;
+        return `Hvala — vidim da ste poslali prilog. Ako je ovo pasoš, diploma ili biometrijska slika, pošaljite ga uz jasan caption: passport, diploma ili biometric photo. Za screenshot problema pošaljite kratak opis na ${supportEmail}.`;
     }
     if (guardrailLanguage === "ar") {
-        return `شكرًا — استلمت المرفق. صور ووثائق WhatsApp لا ترتبط بملفك تلقائيًا حاليًا، لذلك ارفع المستندات من لوحة التحكم أو أرسل لقطات الشاشة إلى ${supportEmail} مع وصف قصير للمشكلة.`;
+        return `شكرًا — استلمت المرفق. إذا كان passport أو diploma أو biometric photo، فأعد إرساله مع caption واضح: passport أو diploma أو biometric photo. للقطات شاشة المشاكل، أرسل وصفًا قصيرًا إلى ${supportEmail}.`;
     }
     if (guardrailLanguage === "fr") {
-        return `Merci — j’ai bien reçu la pièce jointe. Les images et documents WhatsApp ne sont pas encore reliés automatiquement à votre profil, donc veuillez téléverser les documents dans le tableau de bord ou envoyer les captures à ${supportEmail} avec une courte description du problème.`;
+        return `Merci — j’ai bien reçu la pièce jointe. Si c’est un passport, diploma ou biometric photo, renvoyez-le avec un caption clair : passport, diploma ou biometric photo. Pour une capture d’écran de problème, envoyez une courte description à ${supportEmail}.`;
     }
     if (guardrailLanguage === "pt") {
-        return `Obrigado — recebi o anexo. Imagens e documentos enviados pelo WhatsApp ainda não são vinculados automaticamente ao seu perfil, então envie os documentos pelo painel ou mande as capturas para ${supportEmail} com uma breve descrição do problema.`;
+        return `Obrigado — recebi o anexo. Se for passport, diploma ou biometric photo, envie novamente com um caption claro: passport, diploma ou biometric photo. Para captura de problema, envie uma breve descrição para ${supportEmail}.`;
     }
     if (guardrailLanguage === "hi") {
-        return `धन्यवाद — मुझे आपका अटैचमेंट मिला। WhatsApp पर भेजी गई तस्वीरें और दस्तावेज़ अभी अपने-आप आपके प्रोफ़ाइल से नहीं जुड़ते, इसलिए दस्तावेज़ डैशबोर्ड में अपलोड करें या screenshot/contact details के साथ ${supportEmail} पर भेजें।`;
+        return `धन्यवाद — मुझे आपका attachment मिला। अगर यह passport, diploma या biometric photo है, तो clear caption के साथ फिर भेजें: passport, diploma या biometric photo. Problem screenshot के लिए short description ${supportEmail} पर भेजें।`;
     }
 
-    return `Thanks — I received the attachment. WhatsApp images and documents are not linked to your Workers United profile automatically yet, so please upload documents in the dashboard or email screenshots to ${supportEmail} with a short description of the issue.`;
+    return `Thanks — I received the attachment. If this is a passport, diploma, or biometric photo, please resend it with a clear caption: passport, diploma, or biometric photo. For issue screenshots, email ${supportEmail} with a short description.`;
 }
 
 function getEscalationGuardReply(

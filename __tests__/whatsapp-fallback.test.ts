@@ -98,7 +98,7 @@ describe("whatsapp-fallback", () => {
         }, "Portuguese");
 
         expect(reply).toContain("Envie os documentos");
-        expect(reply).toContain("Os anexos do WhatsApp");
+        expect(reply).toContain("WhatsApp estiver vinculado ao perfil");
         expect(reply).not.toContain("Upload documents at");
     });
 
@@ -124,7 +124,7 @@ describe("whatsapp-fallback", () => {
 
         expect(reply).toContain("passport and formal diploma can be uploaded as a clear image or PDF file");
         expect(reply).toContain("/signup");
-        expect(reply).toContain("not as a PDF");
+        expect(reply).toContain("not a PDF");
         expect(reply).not.toContain("Create your account");
     });
 
@@ -141,7 +141,7 @@ describe("whatsapp-fallback", () => {
         expect(reply).toContain("passport");
         expect(reply).toContain("biometric photo");
         expect(reply).toContain("formal vocational diploma");
-        expect(reply).toContain("not linked to the profile automatically");
+        expect(reply).toContain("send them here if your WhatsApp number is linked to your profile");
     });
 
     it("answers registered PDF format questions with exact supported upload types", async () => {
@@ -156,7 +156,7 @@ describe("whatsapp-fallback", () => {
 
         expect(reply).toContain("Passport and formal diploma can be uploaded as a clear image or PDF file");
         expect(reply).toContain("/profile/worker");
-        expect(reply).toContain("not as a PDF");
+        expect(reply).toContain("not a PDF");
     });
 
     it("keeps warm greetings human for unregistered users", async () => {

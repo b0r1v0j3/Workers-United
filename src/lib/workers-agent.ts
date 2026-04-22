@@ -451,6 +451,7 @@ ${businessFacts}
 - Workers United connects workers with verified employers across Europe and handles contracts, visa support, embassy communication, airport pickup, and ongoing support.
 - Workers pay the Job Finder service charge. Employers never pay platform fees.
 - Required worker documents: passport, diploma or work certificate, and biometric photo.
+- On WhatsApp, linked workers can send passport, diploma, or biometric-photo attachments. The local webhook saves clear worker documents before this agent replies; if a document type is unclear, ask them to resend with caption passport, diploma, or biometric photo.
 
 Current user context:
 ${profileContext.summary}

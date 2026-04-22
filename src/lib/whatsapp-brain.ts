@@ -475,36 +475,36 @@ export function buildWorkerDocumentFormatReply(
     switch (lang) {
         case "sr":
             return requiresSignup
-                ? `Da — pasoš i formalna diploma mogu da se uploaduju kao jasna slika ili PDF fajl posle registracije na ${dashboardUrl}. Biometrijska fotografija treba da bude slika, ne PDF. WhatsApp prilozi se i dalje ne vezuju automatski za profil. Ako dashboard i dalje javlja grešku, pošaljite screenshot i kratak opis na ${supportEmail}.`
-                : `Da — pasoš i formalna diploma mogu da se uploaduju kao jasna slika ili PDF fajl u dashboard-u na ${dashboardUrl}. Biometrijska fotografija treba da bude slika, ne PDF. WhatsApp prilozi se i dalje ne vezuju automatski za profil. Ako upload i dalje javlja grešku, pošaljite screenshot i kratak opis na ${supportEmail}.`;
+                ? `Da — pasoš i formalna diploma mogu da se uploaduju kao jasna slika ili PDF fajl posle registracije na ${dashboardUrl}. Biometrijska fotografija treba da bude slika, ne PDF. Kada je WhatsApp broj povezan sa profilom, pasoš, diploma i biometrijska slika mogu da se pošalju i ovde; ako tip dokumenta nije jasan, pošaljite ga uz caption passport, diploma ili biometric photo. Ako dashboard i dalje javlja grešku, pošaljite screenshot i kratak opis na ${supportEmail}.`
+                : `Da — pasoš i formalna diploma mogu da se uploaduju kao jasna slika ili PDF fajl u dashboard-u na ${dashboardUrl}. Biometrijska fotografija treba da bude slika, ne PDF. Možete ih poslati i ovde na WhatsApp ako je broj povezan sa profilom; ako tip nije jasan, dodajte caption passport, diploma ili biometric photo. Ako upload i dalje javlja grešku, pošaljite screenshot i kratak opis na ${supportEmail}.`;
         case "ar":
             return requiresSignup
-                ? `نعم، يمكن رفع جواز السفر والدبلومة الرسمية كصورة واضحة أو ملف PDF بعد التسجيل على ${dashboardUrl}. أما الصورة البيومترية فيجب أن تكون ملف صورة واضحًا وليس PDF. مرفقات WhatsApp لا ترتبط بالملف تلقائيًا. إذا استمر الخطأ في لوحة التحكم فأرسل لقطة شاشة ووصفًا قصيرًا إلى ${supportEmail}.`
-                : `نعم، يمكن رفع جواز السفر والدبلومة الرسمية كصورة واضحة أو ملف PDF من لوحة التحكم على ${dashboardUrl}. أما الصورة البيومترية فيجب أن تكون ملف صورة واضحًا وليس PDF. مرفقات WhatsApp لا ترتبط بالملف تلقائيًا. إذا استمر خطأ الرفع فأرسل لقطة شاشة ووصفًا قصيرًا إلى ${supportEmail}.`;
+                ? `نعم، يمكن رفع جواز السفر والدبلومة الرسمية كصورة واضحة أو ملف PDF بعد التسجيل على ${dashboardUrl}. أما الصورة البيومترية فيجب أن تكون ملف صورة واضحًا وليس PDF. إذا كان رقم WhatsApp مرتبطًا بملف العامل، يمكنك أيضًا إرسال passport أو diploma أو biometric photo هنا؛ أضف caption إذا لم يكن النوع واضحًا. إذا استمر الخطأ في لوحة التحكم فأرسل لقطة شاشة ووصفًا قصيرًا إلى ${supportEmail}.`
+                : `نعم، يمكن رفع جواز السفر والدبلومة الرسمية كصورة واضحة أو ملف PDF من لوحة التحكم على ${dashboardUrl}. أما الصورة البيومترية فيجب أن تكون ملف صورة واضحًا وليس PDF. يمكنك أيضًا إرسال passport أو diploma أو biometric photo هنا إذا كان رقم WhatsApp مرتبطًا بملفك؛ أضف caption إذا لم يكن النوع واضحًا. إذا استمر خطأ الرفع فأرسل لقطة شاشة ووصفًا قصيرًا إلى ${supportEmail}.`;
         case "fr":
             return requiresSignup
-                ? `Oui, le passeport et le diplôme officiel peuvent être téléversés sous forme d’image claire ou de fichier PDF après inscription sur ${dashboardUrl}. La photo biométrique doit être un fichier image clair, pas un PDF. Les pièces jointes WhatsApp ne sont toujours pas reliées automatiquement au profil. Si le tableau de bord affiche encore une erreur, envoyez une capture d’écran avec une courte description à ${supportEmail}.`
-                : `Oui, le passeport et le diplôme officiel peuvent être téléversés sous forme d’image claire ou de fichier PDF dans votre tableau de bord sur ${dashboardUrl}. La photo biométrique doit être un fichier image clair, pas un PDF. Les pièces jointes WhatsApp ne sont toujours pas reliées automatiquement au profil. Si l’erreur de téléversement continue, envoyez une capture d’écran avec une courte description à ${supportEmail}.`;
+                ? `Oui, le passeport et le diplôme officiel peuvent être téléversés sous forme d’image claire ou de fichier PDF après inscription sur ${dashboardUrl}. La photo biométrique doit être un fichier image clair, pas un PDF. Si votre numéro WhatsApp est lié au profil, vous pouvez aussi envoyer passport, diploma ou biometric photo ici ; ajoutez ce caption si le type n’est pas évident. Si le tableau de bord affiche encore une erreur, envoyez une capture d’écran avec une courte description à ${supportEmail}.`
+                : `Oui, le passeport et le diplôme officiel peuvent être téléversés sous forme d’image claire ou de fichier PDF dans votre tableau de bord sur ${dashboardUrl}. La photo biométrique doit être un fichier image clair, pas un PDF. Vous pouvez aussi envoyer passport, diploma ou biometric photo ici si votre numéro WhatsApp est lié au profil ; ajoutez ce caption si le type n’est pas évident. Si l’erreur de téléversement continue, envoyez une capture d’écran avec une courte description à ${supportEmail}.`;
         case "pt":
             return requiresSignup
-                ? `Sim, passaporte e diploma formal podem ser enviados como imagem nítida ou arquivo PDF após o cadastro em ${dashboardUrl}. A foto biométrica deve ser um arquivo de imagem nítido, não um PDF. Os anexos do WhatsApp ainda não são vinculados automaticamente ao perfil. Se o painel continuar mostrando erro, envie uma captura de tela com uma breve descrição para ${supportEmail}.`
-                : `Sim, passaporte e diploma formal podem ser enviados como imagem nítida ou arquivo PDF no seu painel em ${dashboardUrl}. A foto biométrica deve ser um arquivo de imagem nítido, não um PDF. Os anexos do WhatsApp ainda não são vinculados automaticamente ao perfil. Se o erro de envio continuar, envie uma captura de tela com uma breve descrição para ${supportEmail}.`;
+                ? `Sim, passaporte e diploma formal podem ser enviados como imagem nítida ou arquivo PDF após o cadastro em ${dashboardUrl}. A foto biométrica deve ser um arquivo de imagem nítido, não um PDF. Se o número de WhatsApp estiver vinculado ao perfil, você também pode enviar passport, diploma ou biometric photo aqui; use esse caption se o tipo não estiver claro. Se o painel continuar mostrando erro, envie uma captura de tela com uma breve descrição para ${supportEmail}.`
+                : `Sim, passaporte e diploma formal podem ser enviados como imagem nítida ou arquivo PDF no seu painel em ${dashboardUrl}. A foto biométrica deve ser um arquivo de imagem nítido, não um PDF. Você também pode enviar passport, diploma ou biometric photo aqui se o WhatsApp estiver vinculado ao perfil; use esse caption se o tipo não estiver claro. Se o erro de envio continuar, envie uma captura de tela com uma breve descrição para ${supportEmail}.`;
         case "hi":
             if (style === "fallback") {
                 return requiresSignup
-                    ? `${dashboardUrl} पर registration के बाद passport और formal diploma clear image या PDF file के रूप में upload किए जा सकते हैं। Biometric photo clear image file होनी चाहिए, PDF नहीं। WhatsApp attachments अभी profile से automatically link नहीं होते। अगर error जारी रहे, तो screenshot और short description ${supportEmail} पर भेजिए।`
-                    : `Passport और formal diploma ${dashboardUrl} पर clear image या PDF file के रूप में upload किए जा सकते हैं। Biometric photo clear image file होनी चाहिए, PDF नहीं। WhatsApp attachments अभी profile से automatically link नहीं होते। अगर error फिर भी आ रहा है, तो screenshot और short description ${supportEmail} पर भेजिए।`;
+                    ? `${dashboardUrl} पर registration के बाद passport और formal diploma clear image या PDF file के रूप में upload किए जा सकते हैं। Biometric photo clear image file होनी चाहिए, PDF नहीं। अगर WhatsApp number profile से linked है, तो passport, diploma या biometric photo यहाँ भी भेज सकते हैं; type साफ न हो तो यही caption जोड़ें। अगर error जारी रहे, तो screenshot और short description ${supportEmail} पर भेजिए।`
+                    : `Passport और formal diploma ${dashboardUrl} पर clear image या PDF file के रूप में upload किए जा सकते हैं। Biometric photo clear image file होनी चाहिए, PDF नहीं। अगर WhatsApp number profile से linked है, तो passport, diploma या biometric photo यहाँ भी भेज सकते हैं; type साफ न हो तो यही caption जोड़ें। अगर error फिर भी आ रहा है, तो screenshot और short description ${supportEmail} पर भेजिए।`;
             }
             return requiresSignup
-                ? `हाँ, passport और formal diploma ${dashboardUrl} पर signup के बाद clear image या PDF file के रूप में upload किए जा सकते हैं। Biometric photo clear image file होनी चाहिए, PDF नहीं। WhatsApp attachments अभी भी profile से automatically link नहीं होते। अगर dashboard में error फिर भी दिखे, तो screenshot और short description ${supportEmail} पर भेजिए।`
-                : `हाँ, passport और formal diploma ${dashboardUrl} dashboard में clear image या PDF file के रूप में upload किए जा सकते हैं। Biometric photo clear image file होनी चाहिए, PDF नहीं। WhatsApp attachments अभी भी profile से automatically link नहीं होते। अगर upload error फिर भी आ रहा है, तो screenshot और short description ${supportEmail} पर भेजिए।`;
+                ? `हाँ, passport और formal diploma ${dashboardUrl} पर signup के बाद clear image या PDF file के रूप में upload किए जा सकते हैं। Biometric photo clear image file होनी चाहिए, PDF नहीं। अगर WhatsApp number profile से linked है, तो passport, diploma या biometric photo यहाँ भी भेज सकते हैं; type साफ न हो तो यही caption जोड़ें। अगर dashboard में error फिर भी दिखे, तो screenshot और short description ${supportEmail} पर भेजिए।`
+                : `हाँ, passport और formal diploma ${dashboardUrl} dashboard में clear image या PDF file के रूप में upload किए जा सकते हैं। Biometric photo clear image file होनी चाहिए, PDF नहीं। अगर WhatsApp number profile से linked है, तो passport, diploma या biometric photo यहाँ भी भेज सकते हैं; type साफ न हो तो यही caption जोड़ें। अगर upload error फिर भी आ रहा है, तो screenshot और short description ${supportEmail} पर भेजिए।`;
         default:
             if (style === "fallback") {
                 return requiresSignup
-                    ? `After signup at ${dashboardUrl}, passport and formal diploma can be uploaded as a clear image or PDF file in the dashboard. The biometric photo should be uploaded as a clear image file, not as a PDF. WhatsApp attachments still do not link to the profile automatically. If the upload error continues, send a screenshot and a short description to ${supportEmail}.`
-                    : `Passport and formal diploma can be uploaded as a clear image or PDF file at ${dashboardUrl}. The biometric photo should be uploaded as a clear image file, not as a PDF. WhatsApp attachments still do not link to the profile automatically. If the upload error continues, send a screenshot and a short description to ${supportEmail}.`;
+                    ? `After signup at ${dashboardUrl}, passport and formal diploma can be uploaded as a clear image or PDF file in the dashboard. The biometric photo should be a clear image file, not a PDF. If your WhatsApp number is linked to your profile, you can also send passport, diploma, or biometric photo here; add the caption passport, diploma, or biometric photo if the type is not obvious. If the upload error continues, send a screenshot and a short description to ${supportEmail}.`
+                    : `Passport and formal diploma can be uploaded as a clear image or PDF file at ${dashboardUrl}. The biometric photo should be a clear image file, not a PDF. You can also send passport, diploma, or biometric photo here on WhatsApp if your number is linked to your profile; add the caption passport, diploma, or biometric photo if the type is not obvious. If the upload error continues, send a screenshot and a short description to ${supportEmail}.`;
             }
-            return `Yes. Passport and formal diploma can be uploaded as a clear image or PDF file ${accessLine}. The biometric photo should be uploaded as a clear image file, not as a PDF. WhatsApp attachments still do not link to the profile automatically. If the upload error continues, send a screenshot and a short description to ${supportEmail}.`;
+            return `Yes. Passport and formal diploma can be uploaded as a clear image or PDF file ${accessLine}. The biometric photo should be a clear image file, not a PDF. If your WhatsApp number is linked to your profile, you can also send passport, diploma, or biometric photo here; add the caption passport, diploma, or biometric photo if the type is not obvious. If the upload error continues, send a screenshot and a short description to ${supportEmail}.`;
     }
 }
 
@@ -521,57 +521,57 @@ export function buildWorkerDocumentsReply(
         case "sr":
             if (style === "fallback") {
                 return requiresSignup
-                    ? `Posle registracije na ${dashboardUrl} potrebna dokumenta uploadujete kroz dashboard. Potrebni su ${documentsLabel}. WhatsApp prilozi se trenutno ne vezuju automatski za profil.`
-                    : `Dokumenta uploadujete na ${dashboardUrl}. Potrebni su: ${documentsLabel}. WhatsApp prilozi se trenutno ne vezuju automatski za profil.`;
+                    ? `Posle registracije na ${dashboardUrl} potrebna dokumenta možete uploadovati kroz dashboard ili poslati ovde ako je WhatsApp broj povezan sa profilom. Potrebni su ${documentsLabel}.`
+                    : `Dokumenta uploadujete na ${dashboardUrl}, ili ih možete poslati ovde ako je WhatsApp broj povezan sa profilom. Potrebni su: ${documentsLabel}.`;
             }
             return requiresSignup
-                ? `Potrebna dokumenta su ${documentsLabel}. Dokumenta se uploaduju kroz dashboard na ${dashboardUrl} nakon registracije; WhatsApp prilozi se trenutno ne vezuju automatski za profil.`
-                : `Potrebna dokumenta su ${documentsLabel}. Upload i status dokumenata pratite kroz dashboard na ${dashboardUrl}; WhatsApp prilozi se ne vezuju automatski za profil.`;
+                ? `Potrebna dokumenta su ${documentsLabel}. Posle registracije na ${dashboardUrl}, dokumenta možete uploadovati kroz dashboard ili poslati ovde ako je WhatsApp broj povezan sa profilom.`
+                : `Potrebna dokumenta su ${documentsLabel}. Upload i status dokumenata pratite kroz dashboard na ${dashboardUrl}, a dokument možete poslati i ovde ako je WhatsApp broj povezan sa profilom.`;
         case "ar":
             if (style === "fallback") {
                 return requiresSignup
-                    ? `بعد التسجيل على ${dashboardUrl} يتم رفع المستندات المطلوبة من خلال لوحة التحكم. المطلوب: ${documentsLabel}. مرفقات WhatsApp لا ترتبط بالملف تلقائيًا حاليًا.`
-                    : `يمكنك رفع المستندات على ${dashboardUrl}. المطلوب: ${documentsLabel}. مرفقات WhatsApp لا ترتبط بالملف تلقائيًا حاليًا.`;
+                    ? `بعد التسجيل على ${dashboardUrl} يمكن رفع المستندات من لوحة التحكم أو إرسالها هنا إذا كان رقم WhatsApp مرتبطًا بالملف. المطلوب: ${documentsLabel}.`
+                    : `يمكنك رفع المستندات على ${dashboardUrl} أو إرسالها هنا إذا كان رقم WhatsApp مرتبطًا بالملف. المطلوب: ${documentsLabel}.`;
             }
             return requiresSignup
-                ? `المستندات المطلوبة هي ${documentsLabel}. يتم رفع المستندات من خلال لوحة التحكم بعد التسجيل على ${dashboardUrl}؛ مرفقات WhatsApp لا ترتبط بالملف تلقائيًا حاليًا.`
-                : `المستندات المطلوبة هي ${documentsLabel}. ارفع المستندات وتابع حالتها من لوحة التحكم على ${dashboardUrl}؛ مرفقات WhatsApp لا ترتبط بالملف تلقائيًا.`;
+                ? `المستندات المطلوبة هي ${documentsLabel}. بعد التسجيل على ${dashboardUrl} يمكن رفعها من لوحة التحكم أو إرسالها هنا إذا كان رقم WhatsApp مرتبطًا بالملف.`
+                : `المستندات المطلوبة هي ${documentsLabel}. ارفع المستندات وتابع حالتها من لوحة التحكم على ${dashboardUrl}، ويمكنك أيضًا إرسالها هنا إذا كان رقم WhatsApp مرتبطًا بالملف.`;
         case "fr":
             if (style === "fallback") {
                 return requiresSignup
-                    ? `Après inscription sur ${dashboardUrl}, vous téléversez les documents requis dans le tableau de bord. Nous avons besoin de ${documentsLabel}. Les pièces jointes WhatsApp ne sont pas encore reliées automatiquement au profil.`
-                    : `Téléversez les documents sur ${dashboardUrl}. Nous avons besoin de ${documentsLabel}. Les pièces jointes WhatsApp ne sont pas encore reliées automatiquement au profil.`;
+                    ? `Après inscription sur ${dashboardUrl}, vous pouvez téléverser les documents requis dans le tableau de bord ou les envoyer ici si votre numéro WhatsApp est lié au profil. Nous avons besoin de ${documentsLabel}.`
+                    : `Téléversez les documents sur ${dashboardUrl}, ou envoyez-les ici si votre numéro WhatsApp est lié au profil. Nous avons besoin de ${documentsLabel}.`;
             }
             return requiresSignup
-                ? `Les documents requis sont : ${documentsLabel}. Les documents se téléversent dans le tableau de bord après inscription sur ${dashboardUrl} ; les pièces jointes WhatsApp ne sont pas reliées automatiquement au profil pour le moment.`
-                : `Les documents requis sont : ${documentsLabel}. Le téléversement et le statut se suivent dans le tableau de bord sur ${dashboardUrl} ; les pièces jointes WhatsApp ne sont pas reliées automatiquement au profil.`;
+                ? `Les documents requis sont : ${documentsLabel}. Après inscription sur ${dashboardUrl}, vous pouvez les téléverser dans le tableau de bord ou les envoyer ici si votre numéro WhatsApp est lié au profil.`
+                : `Les documents requis sont : ${documentsLabel}. Le téléversement et le statut se suivent dans le tableau de bord sur ${dashboardUrl}, et vous pouvez aussi les envoyer ici si votre numéro WhatsApp est lié au profil.`;
         case "pt":
             if (style === "fallback") {
                 return requiresSignup
-                    ? `Depois do cadastro em ${dashboardUrl}, os documentos obrigatórios são enviados pelo painel. Precisamos de ${documentsLabel}. Os anexos do WhatsApp ainda não são vinculados automaticamente ao perfil.`
-                    : `Envie os documentos em ${dashboardUrl}. Precisamos de ${documentsLabel}. Os anexos do WhatsApp ainda não são vinculados automaticamente ao perfil.`;
+                    ? `Depois do cadastro em ${dashboardUrl}, os documentos obrigatórios podem ser enviados pelo painel ou aqui, se o WhatsApp estiver vinculado ao perfil. Precisamos de ${documentsLabel}.`
+                    : `Envie os documentos em ${dashboardUrl}, ou aqui se o WhatsApp estiver vinculado ao perfil. Precisamos de ${documentsLabel}.`;
             }
             return requiresSignup
-                ? `Os documentos necessários são ${documentsLabel}. Os documentos são enviados pelo painel após o cadastro em ${dashboardUrl}; anexos do WhatsApp ainda não são vinculados automaticamente ao perfil.`
-                : `Os documentos necessários são ${documentsLabel}. O envio e o status dos documentos são acompanhados no painel em ${dashboardUrl}; anexos do WhatsApp não são vinculados automaticamente ao perfil.`;
+                ? `Os documentos necessários são ${documentsLabel}. Depois do cadastro em ${dashboardUrl}, envie pelo painel ou aqui se o WhatsApp estiver vinculado ao perfil.`
+                : `Os documentos necessários são ${documentsLabel}. O envio e o status são acompanhados no painel em ${dashboardUrl}, e você também pode enviar aqui se o WhatsApp estiver vinculado ao perfil.`;
         case "hi":
             if (style === "fallback") {
                 return requiresSignup
-                    ? `${dashboardUrl} पर registration के बाद documents dashboard में upload होते हैं। ज़रूरी documents हैं ${documentsLabel}। WhatsApp attachments अभी profile से automatically link नहीं होते।`
-                    : `Documents ${dashboardUrl} पर upload कीजिए। ज़रूरी documents हैं ${documentsLabel}। WhatsApp attachments अभी profile से automatically link नहीं होते।`;
+                    ? `${dashboardUrl} पर registration के बाद documents dashboard में upload कर सकते हैं या WhatsApp number profile से linked हो तो यहाँ भेज सकते हैं। ज़रूरी documents हैं ${documentsLabel}।`
+                    : `Documents ${dashboardUrl} पर upload कीजिए, या WhatsApp number profile से linked हो तो यहाँ भेजिए। ज़रूरी documents हैं ${documentsLabel}।`;
             }
             return requiresSignup
-                ? `ज़रूरी documents हैं: ${documentsLabel}. Documents registration के बाद ${dashboardUrl} से dashboard में upload किए जाते हैं; WhatsApp attachments अभी profile से automatically link नहीं होते।`
-                : `ज़रूरी documents हैं ${documentsLabel}। Documents upload और उनका status ${dashboardUrl} dashboard में देखें; WhatsApp attachments अपने-आप profile से link नहीं होते।`;
+                ? `ज़रूरी documents हैं: ${documentsLabel}. Registration के बाद ${dashboardUrl} dashboard में upload करें, या WhatsApp number profile से linked हो तो यहाँ भेजें।`
+                : `ज़रूरी documents हैं ${documentsLabel}। Documents upload और status ${dashboardUrl} dashboard में देखें; WhatsApp number profile से linked हो तो document यहाँ भी भेज सकते हैं।`;
         default:
             if (style === "fallback") {
                 return requiresSignup
-                    ? `After signup at ${dashboardUrl}, required documents are uploaded in the dashboard. We need: ${documentsLabel}. WhatsApp attachments are not linked to the profile automatically yet.`
-                    : `Upload documents at ${dashboardUrl}. We need: ${documentsLabel}. WhatsApp attachments are not linked to the profile automatically yet.`;
+                    ? `After signup at ${dashboardUrl}, required documents can be uploaded in the dashboard or sent here if your WhatsApp number is linked to your profile. We need: ${documentsLabel}.`
+                    : `Upload documents at ${dashboardUrl}, or send them here if your WhatsApp number is linked to your profile. We need: ${documentsLabel}.`;
             }
             return requiresSignup
-                ? `The required documents are ${documentsLabel}. Documents are uploaded in the dashboard after registration at ${dashboardUrl}; WhatsApp attachments are not linked to the profile automatically yet.`
-                : `The required documents are ${documentsLabel}. Uploads and document status are tracked in the dashboard at ${dashboardUrl}; WhatsApp attachments are not linked to the profile automatically.`;
+                ? `The required documents are ${documentsLabel}. After registration at ${dashboardUrl}, documents can be uploaded in the dashboard or sent here if your WhatsApp number is linked to your profile.`
+                : `The required documents are ${documentsLabel}. Uploads and document status are tracked in the dashboard at ${dashboardUrl}, and you can also send a document here if your WhatsApp number is linked to your profile.`;
     }
 }
 
@@ -1255,9 +1255,9 @@ export function buildCanonicalWhatsAppFacts({
         "- There is no live public vacancy feed to browse on demand. Openings appear over time, and suitable places can be filled quickly.",
         `- Registration starts at ${website}/signup.`,
         "- Job Finder payment unlocks only after the worker profile is fully complete, the required documents are finished, and admin approval is done.",
-        "- WhatsApp can answer questions and, when the user explicitly asks, collect some text profile details here. Document uploads and screenshots are not processed as WhatsApp attachments yet; those belong in the dashboard.",
+        "- WhatsApp can answer questions, collect some text profile details when the user explicitly asks, and save worker passport/diploma/biometric-photo attachments when the WhatsApp number is linked to a worker profile and the document type is clear.",
         "- Required worker documents are passport, biometric photo, and a final school, university, or formal vocational diploma.",
-        "- Passport and formal diploma uploads can be clear images or PDF files in the dashboard. The biometric photo must be a clear image file, not a PDF.",
+        "- Passport and formal diploma uploads can be clear images or PDF files in the dashboard or via linked WhatsApp. The biometric photo must be a clear image file, not a PDF. Unknown WhatsApp attachments should be resent with caption passport, diploma, or biometric photo.",
         "- A valid passport is required for international employment and work-permit processing; national ID cards and driver's licenses are not accepted instead.",
         "- Personal data and documents are handled securely with encrypted transport and encrypted cloud storage.",
         "- Employers do not pay platform fees.",
@@ -1292,7 +1292,7 @@ Rules:
 7. Do NOT share direct payment links from WhatsApp. If the worker is not payment-ready, never ask whether they want to activate/pay now. If the worker is truly payment-ready, tell them to open the dashboard and start checkout there.
 8. If the user asks to see jobs before paying, explain simply that Workers United works through guided matching rather than a live public jobs list; the service is searching and waiting for the right match.
 9. Do not lead with the guided-matching explanation unless the user asked how the process works or asked to see or confirm current openings.
-10. If the user asks about documents, answer only the required documents and say uploads happen in the dashboard. Never claim WhatsApp attachments update the profile.
+10. If the user asks about documents, answer only the required documents and supported file types. Say documents can be uploaded in the dashboard, and linked workers can also send passport, diploma, or biometric photo here on WhatsApp when the type is clear.
 11. If the user asks about status, use only the provided snapshot and never invent missing data.
 12. Never claim you escalated, forwarded screenshots, opened a ticket, prioritized a case, or that a human/technical team will reply unless the system has actually performed that action.
 13. If the user wants human help or reports a bug, acknowledge it and direct them to the dashboard or ${website}/signup as appropriate, plus ${supportEmail}, but do not promise a live handoff and do not say you added notes to an internal case.
