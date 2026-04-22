@@ -22,11 +22,12 @@ description: Full project architecture reference — tech stack, folder structur
 | Payments | **Stripe** | Checkout Sessions + Webhooks; checkout now reuses/prefills Stripe Customers from canonical worker/agency payment identity data, queue/payment UX explicitly reminds workers to use the same cardholder/billing details their bank expects, and webhook failure telemetry stores issuer/Radar decline context plus billing/card country hints (`payment_intent.payment_failed`, `charge.failed`, `checkout.session.expired`, `checkout.session.completed`) back into `payments.metadata` + `user_activity` so internal ops and analytics can split bank declines from Stripe risk blocks, checkout expiry, and market-specific patterns |
 | AI | **OpenAI GPT-4o-mini** + **Gemini fallback** | Document verification uses GPT primary vision, with Gemini fallback chain (`3.0-flash → 2.5-pro → 2.5-flash`) |
 | AI (Chatbot) | **GPT-5 mini + GPT-5.4 mini** | WhatsApp AI now uses a small intent router + richer response model flow with shorter context windows, shared canonical facts/rules from `src/lib/whatsapp-brain.ts`, shared live quality/handoff heuristics from `src/lib/whatsapp-quality.ts`, canonical `workerRecord` runtime naming, deterministic worker flows for the most common status/docs/payment/support questions, honest support auto-handoff into the real inbox for repeated paid-worker confusion, deterministic human greeting handling for both plain first-contact hellos and warmer small-talk openers like `hello how are you` / `zdravo kako si danas`, plus a conversation-aware language resolver and explicit language-switch detector so short follow-ups and direct `write in Serbian/French/Hindi` requests stay in the user's chosen language across `English / Serbian / Arabic / French / Portuguese / Hindi`; outbound template sends and failed outbound replies are now excluded from the AI history/confusion layer so proactive traffic cannot masquerade as a real assistant turn, while repeated retryable reply-delivery failures now escalate into a support handoff instead of staying only in raw ops logs, and outbound WhatsApp message-log failures now surface in ops/admin instead of disappearing as console-only noise |
+| AI (Shared Agent Channels) | **Hermes/Agent gateway** | WhatsApp webhook and `contact@workersunited.eu` email agent call shared Hermes first with Workers United context and per-channel memory; local WhatsApp OpenAI/Claude routing remains fallback only. This is not a dashboard button/page and does not use n8n. |
 | AI (Brain) | **GPT-5 mini + deterministic ops monitor** | `/api/brain/improve` still uses GPT-5 mini for low-risk conversation learnings, while the daily `/api/cron/brain-monitor` run is now an ops-first deterministic sweep powered by `src/lib/ops-monitor.ts`; every run is stored in `brain_reports`, email is sent only for critical/high ops signals, failure runs are saved instead of blasting raw crash mail, technical monitoring surfaces now live behind the owner-only `/internal` hub instead of the business admin shell, and the auth-health payload now also carries a 72h-vs-previous-72h anonymous signup funnel baseline so ops can distinguish traffic collapse from a hard signup outage |
-| Email | **Nodemailer** + Google Workspace SMTP | `contact@workersunited.eu`; canonical send path is `queueEmail()` in `src/lib/email-templates.ts`, while shared `src/lib/email-queue.ts` now owns retry metadata, retryable SMTP classification, and pending-row processing so email-heavy admin/API/cron flows can distinguish `sent` from `queued_retry` instead of claiming a hard failure too early |
+| Email | **Nodemailer** + Google Workspace SMTP + Gmail/IMAP poller | `contact@workersunited.eu`; outbound system mail still uses `queueEmail()` / `src/lib/email-queue.ts`, while the channel agent uses `/api/cron/email-agent` to read the contact inbox directly over IMAP, send Hermes replies through SMTP, and skip auto/bulk/self mail without n8n. |
 | Hosting | **Vercel** | Cron jobs configured in `vercel.json` |
 | Icons | **Lucide React** | — |
-| WhatsApp | **Meta Cloud API v21.0** | Template messages, AI chatbot, delivery tracking, plus health classification that separates platform-side template failures from recipient-side delivery blocks (`undeliverable`, country restriction); proactive template suppression now keys off the latest real Meta outbound status and automatically decays after a short window instead of treating one stale recipient failure as a permanent block |
+| WhatsApp | **Meta Cloud API v21.0** | Template messages, shared Hermes/Agent channel replies, local AI fallback, delivery tracking, plus health classification that separates platform-side template failures from recipient-side delivery blocks (`undeliverable`, country restriction); proactive template suppression now keys off the latest real Meta outbound status and automatically decays after a short window instead of treating one stale recipient failure as a permanent block |
 
 ---
 
@@ -84,11 +85,12 @@ Workers-United/
 │   │   │   └── email-preview/ # Internal email template sandbox; reuses the shared email-preview workspace while keeping owner-only shortcuts and query-driven payload previews separate from the business admin shell
 │   │   ├── api/               # API routes grouped by domain (admin, auth, agency, payments, messaging, AI, cron)
 │   │   │   ├── account/       # delete, export (GDPR)
+│   │   │   ├── agent/email/   # Bearer-protected inbound bridge for contact@workersunited.eu messages into the shared Hermes/Agent channel
 │   │   │   ├── admin/         # delete-user, employer-status, funnel-metrics (now including payment-quality breakdown plus worker/billing-country issue signals), admin inbox support list, agency-worker approval API with truthful approval-email notification payloads, `admin-review` structured form actions that redirect with truthful re-upload email status, authenticated `send-campaign` outreach dispatch via `queueEmail()`, authenticated WhatsApp blast dispatch via the shared blast helper/strict payment-readiness gate, authenticated `/api/admin/whatsapp-thread-view` seen-state writes for the admin WhatsApp console, and same-origin document preview streaming with legacy image auto-rotation self-heal; manual-match/re-verify are now fully workerId-first
 │   │   │   ├── auth/          # hash-session finalize endpoint used by `/login` after Supabase email/magic-link/recovery redirects
 │   │   │   ├── agency/        # agency claim + agency-owned worker APIs (detail GET/PATCH + documents GET/upload)
 │   │   │   ├── conversations/ # in-platform messaging APIs (`support` thread bootstrap, `match` thread summaries, shared message send/read with anti-contact leakage guardrails)
-│   │   │   ├── cron/          # 10 cron jobs (see below); `brain-monitor` is now the deterministic ops-first daily sweep, reminder/expiry mailers now use the unified email queue, new `process-email-queue` picks up retryable pending email rows every 15 minutes, checkout-recovery step-3 abandonment now targets only the specific stale pending attempt id, and email-heavy crons no longer count/log queue failures as successful sends
+│   │   │   ├── cron/          # 12 cron jobs (see below); `email-agent` polls contact@workersunited.eu directly over IMAP every 5 minutes, `brain-monitor` is the deterministic ops-first daily sweep, reminder/expiry mailers use the unified email queue, `process-email-queue` picks up retryable pending email rows every 15 minutes, checkout-recovery step-3 abandonment targets only the specific stale pending attempt id, and email-heavy crons no longer count/log queue failures as successful sends
 │   │   │   ├── documents/     # verify, verify-passport, request-review (fully workerId-first)
 │   │   │   ├── contracts/     # prepare, generate (DOCX documents)
 │   │   │   ├── stripe/        # create-checkout, webhook, confirm-session fallback; checkout now prebuilds Stripe Customer identity context from canonical worker data, webhook + confirm-session share payment/activation/email finalization helpers, and payment telemetry persists decline/risk plus billing/card-country hints
@@ -100,7 +102,7 @@ Workers-United/
 │   │   │   ├── queue/         # auto-match
 │   │   │   ├── queue-user-email/ # Post-signup immediate email queue helper; now passes canonical welcome `recipientRole`, skips duplicate queueing when a `pending/sent` welcome already exists for the same user, and returns a truthful failure payload when the unified queue reports `sent: false`
 │   │   │   ├── signatures/    # Signature storage
-│   │   │   ├── whatsapp/      # WhatsApp webhook (Meta → GPT-5 mini router + GPT-5.4 mini response flow); delivery-status persistence, identity resolution, OpenAI Responses transport, history-aware language/fallback handling, and employer/admin helper flows are delegated to shared helpers, while the route now consumes all Meta `entry[]/changes[]/messages[]` layers in one POST instead of only the first change, returns `500 partial_failure` so Meta retries when one branch fails, fail-closes production-like traffic when `META_APP_SECRET` is missing instead of silently skipping signature verification, never creates ghost worker rows from WhatsApp onboarding alone, active onboarding now honors explicit mid-flow language switches instead of storing them as profile answers, uses deterministic human/agency onboarding fallback replies when OpenAI is unavailable, and repeated retryable reply-send failures now auto-create a support flag/handoff summary
+│   │   │   ├── whatsapp/      # WhatsApp webhook (Meta → shared Hermes/Agent first, local GPT/Claude router-response fallback); delivery-status persistence, identity resolution, history-aware language/fallback handling, and employer/admin helper flows are delegated to shared helpers, while the route consumes all Meta `entry[]/changes[]/messages[]` layers in one POST instead of only the first change, returns `500 partial_failure` so Meta retries when one branch fails, fail-closes production-like traffic when `META_APP_SECRET` is missing instead of silently skipping signature verification, never creates ghost worker rows from WhatsApp onboarding alone, active onboarding honors explicit mid-flow language switches, uses deterministic human/agency onboarding fallback replies when AI is unavailable, and repeated retryable reply-send failures auto-create a support flag/handoff summary
 │   │   │   └── brain/         # AI brain (collect data, self-improve cron, daily exception monitor)
 │   │   ├── auth/              # Auth callback + role selection
 │   │   │   ├── callback/     # OAuth code callback + hash-link rescue redirect + agency draft claim linking
@@ -173,6 +175,8 @@ Workers-United/
 │   │   ├── worker-notification-eligibility.ts # Shared guard for worker direct email/WhatsApp automations; blocks hidden draft owners, internal/test addresses, and agency drafts without real worker email+phone
 │   │   ├── admin-announcements.ts # Shared admin bulk-announcement/document-fix recipient loader + deliverable-email dedupe + worker eligibility guard + queueEmail dispatch + audit logging
 │   │   ├── email-queue.ts    # Shared email queue retry metadata helpers, retryable SMTP classification, per-row processor, and pending-queue batch processor used by cron/API callers
+│   │   ├── email-agent.ts    # Direct Gmail/IMAP inbound contact agent normalization + Hermes call + SMTP reply helpers
+│   │   ├── workers-agent.ts  # Shared Hermes/Agent bridge helpers, Workers United product context, memory/session scoping, and response extraction
 │   │   ├── whatsapp-blast.ts # Shared admin WhatsApp blast target loader + canonical worker dedupe + direct-notification eligibility guard + strict payment-readiness gating via `payment-eligibility` + announcement/status fallback send path + audit logging
 │   │   ├── godmode.ts         # GodMode utilities
 │   │   ├── docx-generator.ts  # DOCX generation (docxtemplater + nationality mapping)
@@ -194,7 +198,7 @@ Workers-United/
 │   │   ├── database.types.ts  # Auto-generated Supabase types (npm run db:types); checked-in runtime snapshot no longer carries retired `contract_data.candidate_*` override columns or the old employer APR/business-registry fields
 │   │   └── imageUtils.ts      # Image processing helpers; biometric-photo normalization now preserves more original detail and avoids unnecessary downscaling/upscaling
 │   └── types/                 # TypeScript types (currently empty)
-├── vercel.json                # Vercel config: security headers + 9 cron jobs
+├── vercel.json                # Vercel config: security headers + 12 cron jobs
 ├── next.config.ts             # Next.js config
 ├── tsconfig.json              # TypeScript config (`scripts/` excluded from app typecheck; Next may auto-add `.next/dev/types`)
 ├── package.json               # Dependencies & scripts (`npm run typecheck` = canonical TS gate)
@@ -219,7 +223,10 @@ Configured in `vercel.json`:
 | `/api/brain/improve` | Daily 3 AM UTC | **AI self-improvement** — scans DB + conversations, but now stores only low-risk WhatsApp learnings (`common_question`, `error_fix`, `copy_rule`) after shared safety filtering |
 | `/api/cron/whatsapp-nudge` | Daily 11 AM UTC | WhatsApp nudges for users who need a profile/doc action; now reuses the shared worker direct-notification eligibility guard so agency/test/draft contacts are skipped the same way as email/reminder automation |
 | `/api/cron/checkout-recovery` | Every hour at :15 | Recover opened but unpaid `$9` Job Finder checkouts with `1h / 24h / 72h` follow-up and mark stale pending rows as `abandoned`; activity logging now records real queue failures instead of logging `checkout_recovery_sent` on `sent: false` |
+| `/api/cron/process-email-queue` | Every 15 minutes | Process retryable pending email queue rows through the shared SMTP retry helper |
 | `/api/cron/system-smoke` | Every hour at :30 | Route + service smoke monitor (`/`, auth pages, `/api/health`) with critical alert cooldown; optional degraded services now surface as warnings instead of silent healthy |
+| `/api/cron/whatsapp-improve` | Daily 4 AM UTC | Runs low-risk WhatsApp conversation learning/quality improvement maintenance |
+| `/api/cron/email-agent` | Every 5 minutes | Directly polls `contact@workersunited.eu` over Gmail/IMAP, calls shared Hermes/Agent for real inbound mail, and replies through SMTP; no n8n workflow is involved |
 
 ---
 
@@ -237,7 +244,11 @@ User (Browser)
   │     │     └─► Webhook → /api/stripe/webhook (post-payment actions)
   │     └─► Document AI (OpenAI GPT primary, Gemini fallback for verification)
   │
+  ├─► WhatsApp (Meta Cloud API)
+  │     └─► /api/whatsapp/webhook → shared Hermes/Agent first, local AI/deterministic fallback only when needed
+  │
   ├─► Email (Nodemailer + SMTP)
+  │     ├─► contact@workersunited.eu inbound agent via Gmail/IMAP → shared Hermes/Agent → SMTP reply
   │     ├─► Contact form auto-reply
   │     ├─► Status change notifications
   │     ├─► Profile reminders (cron)
@@ -402,6 +413,8 @@ User (Browser)
 | `src/lib/admin-email-preview.ts` | Shared admin email-preview type guards plus payload serialization/parsing for deep-linked live template previews, including offer lifecycle templates like `job_offer`, `offer_reminder`, and `offer_expired` |
 | `src/lib/email-templates.ts` | All HTML email templates; includes `checkout_recovery`, `document_review_result`, `offer_expired`, and a CTA-aware `admin_update` template reused by the shared approval-unlock mail payload, while the shared render shell now enforces a single HTML document skeleton with no external `icons8` assets and no leftover colored offer gradients so every major email stays in the same monochrome Workers United design system; `queueEmail()` now persists queue retry metadata, delegates actual SMTP row processing to `src/lib/email-queue.ts`, and returns explicit WhatsApp sidecar delivery truth (`attempted/sent/error/retryable/failureCategory/messageId`) so callers no longer assume dual-channel success just because a phone number exists |
 | `src/lib/email-queue.ts` | Shared email queue retry helper layer; stamps `__queue` attempt metadata into `template_data`, classifies retryable SMTP failures, processes one queued row or a due batch of pending rows, and exposes `isEmailDeliveryAccepted()` so callers can treat `queued_retry` as a truthful accepted state without pretending it was already sent |
+| `src/lib/workers-agent.ts` | Shared Hermes/Agent bridge for Workers United channels; builds product facts, profile context, channel memory/session ids, instructions, gateway payloads, and response extraction for WhatsApp/email. |
+| `src/lib/email-agent.ts` | Direct Gmail/IMAP contact inbox poller and SMTP reply helper; filters auto/bulk/self messages, normalizes inbound email into shared agent messages, calls Hermes, and returns reply outcomes without n8n. |
 | `src/lib/worker-approval-notifications.ts` | Shared `Job Finder Is Now Unlocked` email payload plus canonical recipient resolver so self-managed worker approval, agency approval, and preview shortcuts all reuse the exact same copy without leaking to hidden/non-canonical agency draft contacts |
 | `src/lib/brain-memory.ts` | Dedupe + normalize helper for `brain_memory` writes |
 | `src/lib/whatsapp-brain.ts` | Shared canonical WhatsApp facts/rules, safer worker/employer prompting, deterministic first-contact greeting reply, conversation-aware language resolution for short/colloquial follow-ups, explicit language-switch detection (`write in Serbian/French/Hindi`, `Piši na srpskom`, etc.), explicit `profile complete + admin approval -> payment unlock` guard language, no-fake-escalation rule set, onboarding trigger detection, and low-risk learning filter used by `/api/whatsapp/webhook` + `/api/brain/improve` |
@@ -445,6 +458,8 @@ User (Browser)
 | `src/lib/whatsapp-inbound-events.ts` | Shared inbound WhatsApp helper; normalizes phone numbers, extracts text/media content, atomically records inbound message rows with duplicate-safe `wamid` handling, explicitly reports whether duplicate delivery retries repaired a missing `user_id` link, and now throws when an inbound row is missing or identity attach silently fails so the webhook route no longer hardcodes normalize/dedupe/log plumbing inline |
 | `src/lib/whatsapp-worker-ai.ts` | Shared worker-side WhatsApp AI helper layer; builds the worker snapshot prompt context, GPT-5 mini intent-router prompt, and GPT-5.4 mini worker reply prompt so the webhook route no longer hardcodes worker AI prompt assembly inline |
 | `src/app/api/whatsapp/webhook/route.ts` | Meta webhook: thinner runtime orchestrator around shared GPT-5 mini routing, GPT-5.4 response prompting, identity-resolution helpers, employer-flow helpers, fallback-copy helpers, status-event persistence, conversation loaders, admin commands, guardrails, deterministic worker replies for common status/docs/payment/support/process flows, truthful support auto-handoff, explicit opt-in WhatsApp onboarding with 24h stale-state cleanup plus `cancel/stop/prekini` escape handling, strict `Yes / No` reprompts for onboarding boolean steps, strict `DD/MM/YYYY` validation/reprompts for onboarding date fields, batch-safe inbound processing that no longer aborts later messages in the same Meta payload, explicit malformed inbound guardrails that log `partial_failure` instead of recording broken rows, duplicate-retry identity repair before skipping duplicate replies, history-aware media fallback plus onboarding seeding that keep the same conversation language even for empty/short messages, `500 partial_failure` retry semantics when one message/status branch fails, no ghost-worker creation during unregistered onboarding completion, role-correct onboarding CTA routing that sends draft/unregistered users to `signupUrl` while linked workers go back to their worker dashboard, truthful completion copy that keeps `$9 Job Finder` locked behind full profile + 3 docs + admin review, and single-response media fallback that avoids pretending WhatsApp attachments already update worker profiles |
+| `src/app/api/agent/email/route.ts` | Bearer-protected inbound bridge for external contact-email payloads; reuses the same shared email agent path as the IMAP poller. |
+| `src/app/api/cron/email-agent/route.ts` | Vercel cron endpoint that polls Gmail/IMAP for unread contact mail every 5 minutes and replies via SMTP after a shared Hermes/Agent response. |
 | `src/app/api/brain/collect/route.ts` | Brain/ops data collector; aggregates funnel, payment telemetry, auth drift, recent user activity, recent WhatsApp conversations, canonical `whatsappTemplateHealth` + failed-template samples, and a shared `opsSnapshot` so the daily monitor sees real operational signals instead of only top-level counts |
 | `src/app/api/brain/improve/route.ts` | Daily low-risk conversation improver; analyzes DB/conversation/error summaries but may only persist safe `common_question / error_fix / copy_rule` learnings after `filterSafeBrainLearnings()` rejects numbers, pricing, country claims, document/legal facts, and URLs |
 | `src/app/api/brain/act/route.ts` | Brain action executor; now accepts canonical `update_worker_status` while still honoring legacy `update_candidate_status` during the transition |
@@ -520,6 +535,13 @@ When adding a new feature, follow this order:
 | `SMTP_USER` | Google Workspace email | ✅ |
 | `SMTP_PASS` | Google Workspace app password | ✅ |
 | `CRON_SECRET` | Vercel cron auth | ✅ |
+| `SHARED_AGENT_BASE_URL` | Shared Hermes/Agent gateway | Required for WhatsApp/email channel agent |
+| `SHARED_AGENT_API_KEY` | Shared Hermes/Agent gateway | Required for WhatsApp/email channel agent |
+| `SHARED_AGENT_MODEL` | Shared Hermes/Agent gateway | Optional (`hermes-agent` default) |
+| `SHARED_AGENT_PRODUCT_KEY` | Shared Hermes/Agent gateway | Optional (`workers-united` default) |
+| `AGENT_EMAIL_WEBHOOK_SECRET` | Email agent inbound bridge | Optional if `CRON_SECRET` is present |
+| `EMAIL_AGENT_LOOKBACK_DAYS` | Email agent IMAP poller | Optional |
+| `EMAIL_AGENT_MAX_MESSAGES` | Email agent IMAP poller | Optional |
 | `NEXT_PUBLIC_BASE_URL` | App base URL | ✅ |
 | `WHATSAPP_TOKEN` | Meta WhatsApp Cloud API | For sending |
 | `WHATSAPP_PHONE_NUMBER_ID` | Meta WhatsApp | For sending |
@@ -530,6 +552,8 @@ When adding a new feature, follow this order:
 | `WHATSAPP_ROUTER_MODEL` | OpenAI | Optional override for WhatsApp intent classifier (`gpt-5-mini` default) |
 | `WHATSAPP_RESPONSE_MODEL` | OpenAI | Optional override for WhatsApp response generator (`gpt-5.4-mini` default) |
 | `BRAIN_DAILY_MODEL` | OpenAI | Optional override for daily Brain snapshots/exception reports (`gpt-5-mini` default) |
+
+Note: `OPENAI_API_KEY` and `GEMINI_API_KEY` are still used by document verification, Brain, and local WhatsApp fallback paths. They are not new requirements for the shared WhatsApp/email channel agent because Hermes owns its own model login.
 
 ---
 
@@ -555,11 +579,13 @@ When adding a new feature, follow this order:
 ### Email Queue
 - The `email_queue` table has a CHECK constraint on the `type` column. Only use types that exist in the constraint (e.g., `document_reminder`, `profile_incomplete`). New types must be added to the DB constraint first.
 - Invalid-email cleanup is an ops responsibility, not just a mailer concern. Known typo/internal domains (`gmai.com`, `gmial.com`, `yahoo.coms`, `1yahoo.com`, `@workersunited.org`, etc.) should be excluded from reminders/reporting and deleted if the worker has no payments, documents, conversations, or other real business activity.
+- `contact@workersunited.eu` channel agent is direct Gmail/IMAP polling plus SMTP replies. Do not put n8n between the inbox and `/api/cron/email-agent`, and do not add a dashboard button/page for this agent.
 
 ### WhatsApp Delivery
 - `src/lib/whatsapp.ts` must log failed sends with `status = failed` **and** a real `error_message`; otherwise cron metrics will falsely look healthy while templates silently fail.
 - `src/app/api/cron/whatsapp-nudge/route.ts` must count `nudged` only when Meta actually returns success. Failed template sends are errors, not nudges.
 - Nudge targeting should dedupe workers by canonical profile/phone, otherwise duplicate worker rows will spam the same person and distort operational metrics.
+- Inbound WhatsApp replies call shared Hermes/Agent first; local OpenAI/Claude/deterministic responses are fallback paths. Do not reintroduce a dashboard-only agent flow for WhatsApp support.
 
 ### Stripe Webhook
 - The user metadata key is `user_id` (not `userId`). Mismatch causes payment to succeed but post-payment actions to fail silently.
