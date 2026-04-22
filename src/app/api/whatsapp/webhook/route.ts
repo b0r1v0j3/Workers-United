@@ -33,6 +33,7 @@ import {
     getEmployerWhatsAppErrorReply,
     getEmployerWhatsAppStaticReply,
     resolveEmployerWhatsAppLead,
+    type WhatsAppEmployerRecord,
 } from "@/lib/whatsapp-employer-flow";
 import {
     classifyWhatsAppIntent,
@@ -66,15 +67,26 @@ import {
     getPlatformContactInfoFromConfig,
     type PlatformContactInfo,
 } from "@/lib/platform-config";
+import {
+    buildWorkersAgentInstructions,
+    buildWorkersChannelMemoryScope,
+    buildWorkersChannelSessionId,
+    callSharedWorkersAgentGateway,
+    getSharedAgentGatewayConfig,
+    getWorkersProductFactsForAgent,
+    normalizeAgentMessages,
+    type WorkersAgentMessage,
+    type WorkersAgentProfileContext,
+} from "@/lib/workers-agent";
 import crypto from "crypto";
 
 // ─── Meta Cloud API Webhook ─────────────────────────────────────────────────
 // Handles:
 // 1. GET  — Webhook verification (hub.challenge)
-// 2. POST — Inbound messages + delivery status updates → intent router + Claude response model
+// 2. POST — Inbound messages + delivery status updates → shared Hermes agent + fallback response model
 //
-// Architecture: User → WhatsApp → Meta → Vercel → intent router (OpenAI) → Claude conversational AI → Vercel → WhatsApp
-// Intent classification uses OpenAI mini (fast/cheap). Conversational replies use Claude Sonnet (natural tone).
+// Architecture: User → WhatsApp → Meta → Vercel → Hermes gateway → Vercel → WhatsApp
+// The local intent router/Claude flow remains as a fallback when Hermes is unavailable.
 
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN || process.env.CRON_SECRET || "";
 const APP_SECRET = process.env.META_APP_SECRET || "";
@@ -118,6 +130,20 @@ interface SupportAccessSnapshot {
     allowed: boolean;
     reason: string | null;
 }
+
+type WhatsAppConversationHistory = Awaited<ReturnType<typeof loadWhatsAppConversationHistory>>;
+
+interface WhatsAppProfileSnapshot {
+    full_name?: string | null;
+    email?: string | null;
+    user_type?: string | null;
+}
+
+type SharedWhatsAppAgentReply = {
+    reply: string;
+    model: string;
+    gatewaySessionId: string | null;
+};
 
 type WhatsAppOnboardingQueryError = { message?: string | null } | null;
 
@@ -284,6 +310,158 @@ async function sendWhatsAppRouteReply(params: {
         retryable: false,
         failureCategory: null as null,
     };
+}
+
+function buildWhatsAppAgentMessages(
+    historyMessages: WhatsAppConversationHistory,
+    latestMessage: string
+): WorkersAgentMessage[] {
+    const messages: WorkersAgentMessage[] = historyMessages
+        .map((message) => ({
+            role: message.direction === "inbound" ? "user" as const : "assistant" as const,
+            content: message.content || "",
+        }))
+        .filter((message) => message.content.trim().length > 0);
+
+    const latest = latestMessage.trim();
+    const lastMessage = messages[messages.length - 1];
+    if (latest && (!lastMessage || lastMessage.role !== "user" || lastMessage.content.trim() !== latest)) {
+        messages.push({ role: "user", content: latest });
+    }
+
+    return normalizeAgentMessages(messages);
+}
+
+function buildWhatsAppAgentProfileContext(params: {
+    workerRecord: WhatsAppWorkerRecord | null;
+    profile: WhatsAppProfileSnapshot | null;
+    employerRecord: WhatsAppEmployerRecord | null;
+    normalizedPhone: string;
+    isEmployer: boolean;
+}): WorkersAgentProfileContext {
+    const profileId = params.workerRecord?.profile_id || params.employerRecord?.profile_id || null;
+    const role = params.workerRecord
+        ? "worker"
+        : params.isEmployer
+            ? "employer"
+            : "public";
+    const name = params.profile?.full_name || params.employerRecord?.company_name || "WhatsApp contact";
+    const email = params.profile?.email || null;
+    const summaryLines = [
+        "Channel: WhatsApp.",
+        `Phone: ${params.normalizedPhone}.`,
+    ];
+
+    if (params.workerRecord) {
+        summaryLines.push(
+            "Identified as a linked worker WhatsApp contact.",
+            `Worker status: ${params.workerRecord.status || "unknown"}.`,
+            `Job Finder service charge paid: ${params.workerRecord.entry_fee_paid ? "yes" : "no"}.`,
+            `Admin approved: ${params.workerRecord.admin_approved ? "yes" : "no"}.`,
+            `Queue joined: ${params.workerRecord.queue_joined_at || "not set"}.`,
+            `Queue position: ${params.workerRecord.queue_position || "not available"}.`,
+            `Preferred job: ${params.workerRecord.preferred_job || "not set"}.`,
+            `Desired countries: ${(params.workerRecord.desired_countries || []).join(", ") || "not set"}.`,
+            `Nationality: ${params.workerRecord.nationality || "not set"}.`,
+            `Current country: ${params.workerRecord.current_country || "not set"}.`
+        );
+    } else if (params.employerRecord) {
+        summaryLines.push(
+            "Identified as a linked employer WhatsApp contact.",
+            `Company: ${params.employerRecord.company_name || "not set"}.`,
+            `Employer status: ${params.employerRecord.status || "unknown"}.`
+        );
+    } else if (params.isEmployer) {
+        summaryLines.push("Likely employer or agency lead from WhatsApp; no linked account found yet.");
+    } else {
+        summaryLines.push("Unlinked WhatsApp contact; may be a worker, employer, agency, or public inquiry.");
+    }
+
+    return {
+        isAuthenticated: Boolean(profileId),
+        profileId,
+        role,
+        name,
+        email,
+        summary: summaryLines.join("\n"),
+    };
+}
+
+async function generateSharedWhatsAppAgentReply({
+    supabase,
+    message,
+    normalizedPhone,
+    workerRecord,
+    profile,
+    employerRecord,
+    isEmployer,
+    historyMessages,
+}: {
+    supabase: ReturnType<typeof createAdminClient>;
+    message: string;
+    normalizedPhone: string;
+    workerRecord: WhatsAppWorkerRecord | null;
+    profile: WhatsAppProfileSnapshot | null;
+    employerRecord: WhatsAppEmployerRecord | null;
+    isEmployer: boolean;
+    historyMessages: WhatsAppConversationHistory;
+}): Promise<SharedWhatsAppAgentReply | null> {
+    const config = getSharedAgentGatewayConfig();
+    if (!config) {
+        return null;
+    }
+
+    const profileContext = buildWhatsAppAgentProfileContext({
+        workerRecord,
+        profile,
+        employerRecord,
+        normalizedPhone,
+        isEmployer,
+    });
+    const memoryScope = buildWorkersChannelMemoryScope({
+        productKey: config.productKey,
+        channel: "whatsapp",
+        profileId: profileContext.profileId,
+        externalId: normalizedPhone,
+    });
+
+    try {
+        const productFacts = await getWorkersProductFactsForAgent(supabase);
+        const instructions = await buildWorkersAgentInstructions({
+            profileContext,
+            productFacts,
+            productKey: config.productKey,
+            memoryScope,
+        });
+        const channelInstructions = `${instructions}
+
+WhatsApp channel rules:
+- Answer as the shared Hermes agent inside Workers United.
+- Keep replies concise enough for WhatsApp.
+- Do not mention or offer a dashboard agent button.
+- Use dashboard links only when needed for profile, payment, documents, job requests, or account actions.`;
+        const sessionId = buildWorkersChannelSessionId({
+            productKey: config.productKey,
+            channel: "whatsapp",
+            identity: profileContext.profileId || normalizedPhone,
+            conversationId: normalizedPhone,
+        });
+        const result = await callSharedWorkersAgentGateway({
+            config,
+            instructions: channelInstructions,
+            messages: buildWhatsAppAgentMessages(historyMessages, message),
+            sessionId,
+        });
+
+        return {
+            reply: result.reply,
+            model: result.model,
+            gatewaySessionId: result.gatewaySessionId,
+        };
+    } catch (error) {
+        console.error("[WhatsApp] Shared Hermes agent error:", error);
+        return null;
+    }
 }
 
 // ─── Meta signature verification ─────────────────────────────────────────────
@@ -796,6 +974,48 @@ export async function POST(request: NextRequest) {
                     const employerHistory = await ensureHistoryMessages();
                     const employerLanguage = resolveWhatsAppLanguageName(content, null, employerHistory);
                     const { contactInfo: platformContact } = await loadPlatformMessagingConfig();
+                    const sharedEmployerReply = await generateSharedWhatsAppAgentReply({
+                        supabase,
+                        message: content,
+                        normalizedPhone,
+                        workerRecord: null,
+                        profile: null,
+                        employerRecord,
+                        isEmployer: true,
+                        historyMessages: employerHistory,
+                    });
+                    if (sharedEmployerReply) {
+                        const employerSharedReplyResult = await sendWhatsAppRouteReply({
+                            admin: supabase,
+                            phone: normalizedPhone,
+                            text: sharedEmployerReply.reply,
+                            userId: activityUserId || undefined,
+                            activityUserId,
+                            supportRole,
+                            failureContext: "employer_shared_agent_reply",
+                        });
+                        if (!employerSharedReplyResult.success) {
+                            if (employerSharedReplyResult.retryable) {
+                                hadProcessingError = true;
+                            }
+                            continue;
+                        }
+                        await logServerActivity(
+                            activityUserId || null,
+                            "whatsapp_shared_agent_response",
+                            "messaging",
+                            {
+                                phone: normalizedPhone,
+                                user_message: content.substring(0, 200),
+                                bot_response: sharedEmployerReply.reply.substring(0, 500),
+                                response_type: "shared_agent",
+                                model: sharedEmployerReply.model,
+                                gateway_session_id: sharedEmployerReply.gatewaySessionId,
+                                role: "employer",
+                            }
+                        );
+                        continue;
+                    }
                     if (ANTHROPIC_API_KEY) {
                         try {
                             const empBrainMemory = await loadWhatsAppBrainMemory(supabase, BRAIN_MEMORY_LIMIT);
@@ -888,14 +1108,32 @@ export async function POST(request: NextRequest) {
                 let aiResponse: string | null = null;
                 let routerDecision: WhatsAppRouterDecision | null = null;
                 let deterministicReplyFlowKey: string | null = null;
-                let responseType: "claude" | "fallback" | "deterministic" | "auto_handoff" = "fallback";
+                let responseType: "shared_agent" | "claude" | "fallback" | "deterministic" | "auto_handoff" = "fallback";
+                let aiModel = "fallback";
                 let historyMessages: Awaited<ReturnType<typeof loadWhatsAppConversationHistory>> = [];
                 let brainMemory: Awaited<ReturnType<typeof loadWhatsAppBrainMemory>> = [];
                 let businessFacts = "";
                 let supportAccess: SupportAccessSnapshot | null = null;
                 const hasRouterKey = !!OPENAI_API_KEY_ENV;
                 const hasResponseKey = !!ANTHROPIC_API_KEY;
-                if (hasRouterKey || hasResponseKey) {
+                historyMessages = await ensureHistoryMessages();
+                const sharedWorkerReply = await generateSharedWhatsAppAgentReply({
+                    supabase,
+                    message: content,
+                    normalizedPhone,
+                    workerRecord: linkedWorkerRecord,
+                    profile,
+                    employerRecord: null,
+                    isEmployer: false,
+                    historyMessages,
+                });
+                if (sharedWorkerReply) {
+                    aiResponse = sharedWorkerReply.reply;
+                    responseType = "shared_agent";
+                    aiModel = sharedWorkerReply.model;
+                }
+
+                if (!aiResponse && (hasRouterKey || hasResponseKey)) {
                     try {
                         const platformMessagingConfig = await loadPlatformMessagingConfig();
                         [historyMessages, brainMemory, businessFacts, supportAccess] = await Promise.all([
@@ -1003,6 +1241,7 @@ export async function POST(request: NextRequest) {
                             });
                             deterministicReplyFlowKey = `auto_handoff_${confusionAnalysis.reason || "support_loop"}`;
                             responseType = "auto_handoff";
+                            aiModel = "deterministic";
                         } else if (hasResponseKey) {
                             // Step 4: Claude generates a natural, conversational reply
                             // Reference draft (if any) is fed as factual context, not sent directly
@@ -1023,6 +1262,7 @@ export async function POST(request: NextRequest) {
                                 referenceDraft,
                             });
                             responseType = "claude";
+                            aiModel = WHATSAPP_RESPONSE_MODEL;
                         } else if (referenceDraft) {
                             // Fallback: no Claude key, use deterministic reply directly
                             aiResponse = referenceDraft;
@@ -1030,6 +1270,7 @@ export async function POST(request: NextRequest) {
                                 ? `registered_${routerDecision.intent}`
                                 : `unregistered_${routerDecision.intent}`;
                             responseType = "deterministic";
+                            aiModel = "deterministic";
                         }
 
                         console.log(
@@ -1110,7 +1351,11 @@ export async function POST(request: NextRequest) {
                             userId: activityUserId || undefined,
                             activityUserId,
                             supportRole,
-                            failureContext: aiResponse ? "ai_reply" : "fallback_reply",
+                            failureContext: responseType === "shared_agent"
+                                ? "shared_agent_reply"
+                                : aiResponse
+                                    ? "ai_reply"
+                                    : "fallback_reply",
                         });
                         if (!replyResult.success) {
                             if (replyResult.retryable) {
@@ -1133,16 +1378,22 @@ export async function POST(request: NextRequest) {
                         } else {
                             await logServerActivity(
                                 activityUserId || null,
-                                aiResponse ? "whatsapp_ai_response" : "whatsapp_fallback_response",
+                                aiResponse
+                                    ? responseType === "shared_agent"
+                                        ? "whatsapp_shared_agent_response"
+                                        : "whatsapp_ai_response"
+                                    : "whatsapp_fallback_response",
                                 "messaging",
                                 {
                                     phone: normalizedPhone,
                                     user_message: content.substring(0, 200),
                                     bot_response: finalReplyText.substring(0, 500),
                                     response_type: aiResponse
-                                        ? (guardrailResult.triggered ? "claude_guarded" : (finalReplyText !== replyText ? "claude_language_fallback" : "claude"))
+                                        ? responseType === "shared_agent"
+                                            ? (guardrailResult.triggered ? "shared_agent_guarded" : (finalReplyText !== replyText ? "shared_agent_language_fallback" : "shared_agent"))
+                                            : (guardrailResult.triggered ? "claude_guarded" : (finalReplyText !== replyText ? "claude_language_fallback" : "claude"))
                                         : "fallback",
-                                    model: aiResponse ? WHATSAPP_RESPONSE_MODEL : "fallback",
+                                    model: aiResponse ? aiModel : "fallback",
                                     guardrail_reason: guardrailResult.reason,
                                     expected_language: effectiveReplyLanguage,
                                     language_forced_to_fallback: finalReplyText !== replyText,

@@ -596,7 +596,7 @@ export async function GET(request: Request) {
                     stripe_session_id: pendingEntry.payment.stripe_checkout_session_id,
                     checkout_entry_source: recoverySnapshot.entrySource,
                     checkout_opened_at: checkoutOpenedAtIso,
-                    latest_funnel_stage: suppressedMetadataPatch.latest_funnel_stage,
+                    latest_funnel_stage: readCheckoutRecoveryMetadata(suppressedMetadataPatch).latestFunnelStage,
                     recovery_step: recoveryStep,
                     recovery_outcome: "suppressed",
                     reason: unlockState.reason,
@@ -755,7 +755,7 @@ export async function GET(request: Request) {
                         hours_since_checkout: Math.floor(hoursSinceCheckout),
                         checkout_opened_at: checkoutOpenedAtIso,
                         checkout_entry_source: recoverySnapshot.entrySource,
-                        latest_funnel_stage: abandonedMetadataPatch.latest_funnel_stage,
+                        latest_funnel_stage: readCheckoutRecoveryMetadata(abandonedMetadataPatch).latestFunnelStage,
                         recovery_outcome: "abandoned",
                     }, "warning");
                 }
@@ -804,7 +804,7 @@ export async function GET(request: Request) {
                     payment_id: pendingEntry.payment.id,
                     checkout_opened_at: checkoutOpenedAtIso,
                     checkout_entry_source: recoverySnapshot.entrySource,
-                    latest_funnel_stage: failedMetadataPatch.latest_funnel_stage,
+                    latest_funnel_stage: readCheckoutRecoveryMetadata(failedMetadataPatch).latestFunnelStage,
                     recovery_outcome: "failed",
                     error: failureMessage,
                 }, "error");

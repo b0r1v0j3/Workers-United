@@ -74,6 +74,10 @@
     {
       "path": "/api/cron/system-smoke",
       "schedule": "30 * * * *"
+    },
+    {
+      "path": "/api/cron/email-agent",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
