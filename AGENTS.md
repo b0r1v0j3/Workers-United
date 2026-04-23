@@ -1,6 +1,6 @@
 # 🏗️ Workers United — AGENTS.md
 
-> **Poslednje ažuriranje:** 22.04.2026 (Workers United kanalni agent NIJE dashboard dugme: shared Hermes/Agent sada ulazi kroz WhatsApp webhook i `contact@workersunited.eu`; email kanal radi direktno preko Gmail/IMAP cron pollera `/api/cron/email-agent` i SMTP odgovora, uz bearer inbound bridge `/api/agent/email`. Za ovaj kanalni agent nisu potrebni novi OpenAI/Gemini ključevi, jer shared Hermes nosi svoj model login; n8n se ne koristi za ovaj tok.)
+> **Poslednje ažuriranje:** 23.04.2026 (Workers United kanalni agent NIJE dashboard dugme: shared Hermes/Agent sada ulazi kroz WhatsApp webhook i `contact@workersunited.eu`; email kanal radi direktno preko Gmail/IMAP cron pollera `/api/cron/email-agent` i SMTP odgovora, uz bearer inbound bridge `/api/agent/email`. Za ovaj kanalni agent nisu potrebni novi OpenAI/Gemini ključevi, jer shared Hermes nosi svoj model login; n8n se ne koristi za ovaj tok. Windows Security/Defender pravilo: ne dekriptovati lokalne deploy tokene kroz ad-hoc PowerShell.)
 
 ---
 
@@ -285,6 +285,7 @@ Kad se doda novo obavezno polje, MORA se uraditi sledeće:
 - [ ] **Referral / success stories / growth loops** — tek kad bude dovoljno realnih uspešnih case-eva
 
 ### ✅ Završeno (poslednje)
+- [x] Windows Security/Defender ops hardening: potvrđeno je da alarm nije došao iz Workers United koda/build-a, nego iz ad-hoc PowerShell komandi koje su dekriptovale lokalni Vercel token iz Codex secrets foldera radi deploy-a; brzi Defender scan je završen, stari uTorrent bundle fajl više nije na disku, a operativno pravilo je da se ubuduće koristi GitHub/Vercel auto deploy ili zvanični konektor umesto lokalnog DPAPI token-decrypt flow-a — 23.04.2026
 - [x] Channel-first shared Hermes/Agent za Workers United: WhatsApp webhook prvo poziva shared Hermes gateway sa `workers-united:{channel}:{identity}` memory/session scope-om, a `/api/cron/email-agent` direktno čita `contact@workersunited.eu` Gmail inbox preko IMAP-a i šalje SMTP odgovor iz istog shared agenta; `/api/agent/email` ostaje bearer inbound bridge, bez dashboard agent dugmeta i bez n8n workflow-a — 22.04.2026
 - [x] Messaging phase 2 (WS3) delivery: uvedeni su worker/employer `match` inbox route-ovi (`/profile/worker/matches`, `/profile/employer/inbox`) i novi `/api/conversations/match` summary API, `src/lib/messaging.ts` sada automatski kreira match thread tek posle `accepted offer + confirmation fee paid`, `appendConversationMessage()` sada blokira direktni phone/email/link leakage u `match` thread-u (flag + `waiting_on_support`), a admin `/admin/inbox` sada vidi i `support` i `match` thread-ove; regression/test gate potvrđen (`npm test -- __tests__/messaging.test.ts`, `npm run typecheck`, `npm run lint`, `npm run build`) — 07.04.2026
 - [x] Profile workspace shell unification (WS2 slice): dodat je novi shared `src/components/profile/WorkspaceFrame.tsx` (kanonski hero/surface/metric primitives), a `DashboardClient` (worker), `EmployerProfileClient` i `AgencyDashboardClient` sada koriste isti shell treatment za ekvivalentne workspace elemente bez promene poslovnih gate-ova (`$9 unlock`, admin review, support access) — 07.04.2026
@@ -1108,6 +1109,7 @@ Offline verifikacija: admin preuzme PDF-ove lokalno
 49. **`/api/track` za anonimne evente MORA slati `user_id: null`** — string `"anonymous"` nije validan UUID i tiho ubija funnel telemetry; anonimni status i kontekst treba čuvati u `details`.
 50. **Brain stall metrika mora mapirati po korisniku (`worker_documents.user_id`, `payments.user_id`)** — heuristika `created_at && c.created_at` daje lažne rezultate (`no_docs_uploaded`, `payment_at`) i vodi AI na pogrešne zaključke.
 51. **Checkout route MORA imati onboarding self-heal** — ako nedostaje `profiles` ili `worker_onboarding` zapis, `/api/stripe/create-checkout` treba automatski da ih kreira pre eligibility check-a, da worker ne ostane blokiran i da payment telemetry beleži realne pokušaje.
+52. **Windows Security / deploy token pravilo** — NIKAD ne čitati/dekriptovati `C:\Users\BORIVOJE\.codex\secrets\*.json` kroz ad-hoc PowerShell radi Vercel/Fly deploy-a ili env pregleda. Microsoft Defender to ispravno klasifikuje kao sumnjivo credential/PowerShell ponašanje (`Trojan:Win32/PowhidSubExec.B`). Za Workers United deploy koristi `git push` → Vercel auto deploy, GitHub/Vercel konektor ili već autentifikovan CLI bez ručnog DPAPI decrypt-a. Ne dodavati Defender exclusion za `.codex\secrets`, PowerShell, `npx`, ili ceo repo; ako ikad treba performance exclusion, sme biti samo usko za build/cache foldere i uz admin potvrdu.
 
 
 ---
