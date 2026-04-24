@@ -90,7 +90,7 @@ export default function Home() {
             <div className="mx-auto grid max-w-[1180px] gap-10 px-5 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
               <div className="animate-in fade-in slide-in-from-left-5 duration-700">
                 <h1 className="text-4xl font-semibold leading-[1.08] tracking-tight text-[#141414] md:text-6xl">
-                  We run hiring like a clean stack of documents, not chaos.
+                  Legal work opportunities through verified employers, with full visa and document support.
                 </h1>
                 <div className="relative mt-5 h-[340px] w-full md:hidden">
                   <article className="absolute left-0 top-0 w-[78%] rotate-[-5deg] rounded-3xl border border-[#e2d8cd] bg-[#fff7ee] p-4 shadow-[0_22px_35px_-28px_rgba(15,23,42,0.18)]">
