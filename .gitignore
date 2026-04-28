@@ -66,3 +66,6 @@ template-audit.txt
 AGENT_VIEW_PROOOF.png
 DOC_WIZARD_RESTORATION.png
 tmp/
+
+# Local Supabase CLI/management token (never commit)
+.supabase-token
