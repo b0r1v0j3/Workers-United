@@ -66,6 +66,11 @@ template-audit.txt
 AGENT_VIEW_PROOOF.png
 DOC_WIZARD_RESTORATION.png
 tmp/
+output/
+.playwright-cli/
+supabase/.temp/
+build_errors*.txt
+mobile-*.log
 
 # Local Supabase CLI/management token (never commit)
 .supabase-token

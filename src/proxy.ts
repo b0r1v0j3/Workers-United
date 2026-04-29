@@ -3,18 +3,19 @@ import { NextResponse, type NextRequest } from "next/server";
 
 // ─── CSRF Protection ────────────────────────────────────────────────────────
 // Validates Origin header on mutating requests to prevent cross-site attacks.
-// Exempt: Stripe webhooks, WhatsApp webhooks, cron jobs (use Bearer token auth).
+// Exempt: Stripe/WhatsApp webhooks and server-to-server routes that use Bearer token auth.
 
 const CSRF_EXEMPT_PATHS = [
     "/api/stripe/webhook",
     "/api/whatsapp",
     "/api/cron/",
     "/api/brain/",
+    "/api/agent/email",
     "/api/health",
     "/api/track",
 ];
 
-function isCsrfExempt(pathname: string): boolean {
+export function isCsrfExempt(pathname: string): boolean {
     return CSRF_EXEMPT_PATHS.some((p) => pathname.startsWith(p));
 }
 

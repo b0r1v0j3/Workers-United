@@ -2,6 +2,7 @@ import { sendEmail } from "@/lib/mailer";
 import { escapeHtml } from "@/lib/sanitize";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+    buildWorkersAgentProfileContext,
     buildWorkersAgentInstructions,
     buildWorkersChannelMemoryScope,
     buildWorkersChannelSessionId,
@@ -11,6 +12,8 @@ import {
     normalizeAgentMessages,
     type WorkersAgentProfileContext,
 } from "@/lib/workers-agent";
+
+type AdminClient = ReturnType<typeof createAdminClient>;
 
 export type EmailAgentPayload = {
     fromEmail?: string;
@@ -65,7 +68,7 @@ function buildReplyHtml(reply: string): string {
     `;
 }
 
-function buildEmailContext({
+function buildPublicEmailContext({
     fromEmail,
     fromName,
     subject,
@@ -91,6 +94,132 @@ function buildEmailContext({
     };
 }
 
+async function findProfileUserByEmail(admin: AdminClient, fromEmail: string) {
+    const { data: profile, error: profileError } = await admin
+        .from("profiles")
+        .select("id, email, full_name, user_type")
+        .ilike("email", fromEmail)
+        .limit(1)
+        .maybeSingle();
+
+    if (profileError) {
+        throw profileError;
+    }
+
+    if (profile?.id) {
+        return {
+            id: profile.id,
+            email: profile.email,
+            user_metadata: {
+                user_type: profile.user_type,
+                full_name: profile.full_name,
+            },
+        };
+    }
+
+    const [
+        { data: worker, error: workerError },
+        { data: employer, error: employerError },
+        { data: agency, error: agencyError },
+    ] = await Promise.all([
+        admin
+            .from("worker_onboarding")
+            .select("profile_id, submitted_email, submitted_full_name")
+            .ilike("submitted_email", fromEmail)
+            .not("profile_id", "is", null)
+            .limit(1)
+            .maybeSingle(),
+        admin
+            .from("employers")
+            .select("profile_id, contact_email, company_name")
+            .ilike("contact_email", fromEmail)
+            .not("profile_id", "is", null)
+            .limit(1)
+            .maybeSingle(),
+        admin
+            .from("agencies")
+            .select("profile_id, contact_email, display_name, legal_name")
+            .ilike("contact_email", fromEmail)
+            .limit(1)
+            .maybeSingle(),
+    ]);
+
+    const lookupError = workerError || employerError || agencyError;
+    if (lookupError) {
+        throw lookupError;
+    }
+
+    if (worker?.profile_id) {
+        return {
+            id: worker.profile_id,
+            email: worker.submitted_email || fromEmail,
+            user_metadata: {
+                user_type: "worker",
+                full_name: worker.submitted_full_name,
+            },
+        };
+    }
+
+    if (employer?.profile_id) {
+        return {
+            id: employer.profile_id,
+            email: employer.contact_email || fromEmail,
+            user_metadata: {
+                user_type: "employer",
+                full_name: employer.company_name,
+            },
+        };
+    }
+
+    if (agency?.profile_id) {
+        return {
+            id: agency.profile_id,
+            email: agency.contact_email || fromEmail,
+            user_metadata: {
+                user_type: "agency",
+                full_name: agency.display_name || agency.legal_name,
+            },
+        };
+    }
+
+    return null;
+}
+
+async function buildEmailContext({
+    admin,
+    fromEmail,
+    fromName,
+    subject,
+}: {
+    admin: AdminClient;
+    fromEmail: string;
+    fromName: string;
+    subject: string;
+}): Promise<WorkersAgentProfileContext> {
+    const profileUser = await findProfileUserByEmail(admin, fromEmail);
+    const channelSummary = [
+        `Channel: email via ${CONTACT_EMAIL}.`,
+        `Sender email: ${fromEmail}`,
+        `Sender name: ${fromName || "not provided"}`,
+        `Subject: ${subject || "(no subject)"}`,
+    ].join("\n");
+
+    if (!profileUser) {
+        return buildPublicEmailContext({ fromEmail, fromName, subject });
+    }
+
+    const accountContext = await buildWorkersAgentProfileContext({ admin, user: profileUser });
+
+    return {
+        ...accountContext,
+        summary: [
+            channelSummary,
+            "",
+            accountContext.summary,
+        ].join("\n"),
+    };
+}
+
 export async function handleInboundEmailAgent(payload: EmailAgentPayload): Promise<EmailAgentResult> {
     const config = getSharedAgentGatewayConfig();
     if (!config) {
@@ -107,10 +236,11 @@ export async function handleInboundEmailAgent(payload: EmailAgentPayload): Promi
     }
 
     const supabase = createAdminClient();
-    const profileContext = buildEmailContext({ fromEmail, fromName, subject });
+    const profileContext = await buildEmailContext({ admin: supabase, fromEmail, fromName, subject });
     const memoryScope = buildWorkersChannelMemoryScope({
         productKey: config.productKey,
         channel: "email",
+        profileId: profileContext.profileId,
         externalId: fromEmail,
     });
     const productFacts = await getWorkersProductFactsForAgent(supabase);
@@ -131,7 +261,7 @@ Email channel rules:
     const sessionId = buildWorkersChannelSessionId({
         productKey: config.productKey,
         channel: "email",
-        identity: fromEmail,
+        identity: profileContext.profileId || fromEmail,
         conversationId: payload.threadId || payload.messageId || subject,
     });
     const messages = normalizeAgentMessages([{

@@ -1,4 +1,5 @@
 import React from "react";
+/* eslint-disable jsx-a11y/alt-text -- @react-pdf/renderer Image does not support alt props. */
 import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
 import { colors } from "./styles";
 

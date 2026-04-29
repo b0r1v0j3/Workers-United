@@ -17,6 +17,7 @@ export default defineConfig([
     "next-env.d.ts",
     "scripts/**",
     "assets/**",
+    "tmp/**",
     "tmp_query.ts",
   ]),
 ]);
