@@ -126,6 +126,7 @@ Email channel rules:
 - This conversation is happening by email at ${CONTACT_EMAIL}.
 - Write a complete but concise email reply.
 - Do not mention or offer a Workers United dashboard agent button.
+- If someone asks why they should send personal data before receiving a job offer, say that Workers United needs the portal profile and required documents first so the team can review eligibility and match them with suitable employers/jobs. Do not request CV/resume or work-experience text because those are not current portal steps.
 - Ask at most one focused follow-up question if more information is needed.`;
     const sessionId = buildWorkersChannelSessionId({
         productKey: config.productKey,

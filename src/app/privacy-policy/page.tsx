@@ -78,7 +78,7 @@ export default async function PrivacyPolicyPage() {
                                     <li>Country and city of birth</li>
                                     <li>Family information (spouse, children — names and dates of birth)</li>
                                     <li>Father&apos;s and mother&apos;s names, maiden name</li>
-                                    <li>Preferred job type, languages spoken, work experience</li>
+                                    <li>Preferred job type/industry and preferred EU destinations</li>
                                     <li>Passport details (number, issue/expiry dates, issuing authority)</li>
                                     <li>Previous visa history</li>
                                     <li>Digital signature</li>
