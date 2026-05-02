@@ -31,7 +31,7 @@ INSERT INTO platform_config (key, value, description) VALUES
   ('refund_policy_sr', 'Ukoliko ne dobijete ponudu za posao u roku od 90 dana, vaš novac će biti vraćen.', 'Refund policy (Serbian)'),
   ('placement_fee_serbia', '$190', 'Placement fee for Serbia'),
   ('website_url', 'workersunited.eu', 'Main website URL'),
-  ('contact_email', 'contact@workersunited.eu', 'Contact email'),
+  ('contact_email', 'workers.united.eu@gmail.com', 'Contact email'),
   ('platform_name', 'Workers United', 'Platform display name'),
   ('supported_documents', 'passport, diploma, biometric photo', 'Required documents for workers'),
   ('processing_time', '2-8 weeks depending on country', 'Expected visa processing time'),

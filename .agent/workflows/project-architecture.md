@@ -22,9 +22,9 @@ description: Full project architecture reference — tech stack, folder structur
 | Payments | **Stripe** | Checkout Sessions + Webhooks; checkout now reuses/prefills Stripe Customers from canonical worker/agency payment identity data, queue/payment UX explicitly reminds workers to use the same cardholder/billing details their bank expects, and webhook failure telemetry stores issuer/Radar decline context plus billing/card country hints (`payment_intent.payment_failed`, `charge.failed`, `checkout.session.expired`, `checkout.session.completed`) back into `payments.metadata` + `user_activity` so internal ops and analytics can split bank declines from Stripe risk blocks, checkout expiry, and market-specific patterns |
 | AI | **OpenAI GPT-4o-mini** + **Gemini fallback** | Document verification uses GPT primary vision, with Gemini fallback chain (`3.0-flash → 2.5-pro → 2.5-flash`) |
 | AI (Chatbot) | **GPT-5 mini + GPT-5.4 mini** | WhatsApp AI now uses a small intent router + richer response model flow with shorter context windows, shared canonical facts/rules from `src/lib/whatsapp-brain.ts`, shared live quality/handoff heuristics from `src/lib/whatsapp-quality.ts`, canonical `workerRecord` runtime naming, deterministic worker flows for the most common status/docs/payment/support questions, honest support auto-handoff into the real inbox for repeated paid-worker confusion, deterministic human greeting handling for both plain first-contact hellos and warmer small-talk openers like `hello how are you` / `zdravo kako si danas`, plus a conversation-aware language resolver and explicit language-switch detector so short follow-ups and direct `write in Serbian/French/Hindi` requests stay in the user's chosen language across `English / Serbian / Arabic / French / Portuguese / Hindi`; outbound template sends and failed outbound replies are now excluded from the AI history/confusion layer so proactive traffic cannot masquerade as a real assistant turn, while repeated retryable reply-delivery failures now escalate into a support handoff instead of staying only in raw ops logs, and outbound WhatsApp message-log failures now surface in ops/admin instead of disappearing as console-only noise |
-| AI (Shared Agent Channels) | **Hermes/Agent gateway** | WhatsApp webhook and `contact@workersunited.eu` email agent call shared Hermes first with Workers United context and per-channel memory; local WhatsApp OpenAI/Claude routing remains fallback only. This is not a dashboard button/page and does not use n8n. |
+| AI (Shared Agent Channels) | **Hermes/Agent gateway** | WhatsApp webhook and `workers.united.eu@gmail.com` email agent call shared Hermes first with Workers United context and per-channel memory; local WhatsApp OpenAI/Claude routing remains fallback only. This is not a dashboard button/page and does not use n8n. |
 | AI (Brain) | **GPT-5 mini + deterministic ops monitor** | `/api/brain/improve` still uses GPT-5 mini for low-risk conversation learnings, while the daily `/api/cron/brain-monitor` run is now an ops-first deterministic sweep powered by `src/lib/ops-monitor.ts`; every run is stored in `brain_reports`, email is sent only for critical/high ops signals, failure runs are saved instead of blasting raw crash mail, technical monitoring surfaces now live behind the owner-only `/internal` hub instead of the business admin shell, and the auth-health payload now also carries a 72h-vs-previous-72h anonymous signup funnel baseline so ops can distinguish traffic collapse from a hard signup outage |
-| Email | **Nodemailer** + Google Workspace SMTP + Gmail/IMAP poller | `contact@workersunited.eu`; outbound system mail still uses `queueEmail()` / `src/lib/email-queue.ts`, while the channel agent uses `/api/cron/email-agent` to read the contact inbox directly over IMAP, send Hermes replies through SMTP, and skip auto/bulk/self mail without n8n. |
+| Email | **Nodemailer** + Gmail SMTP + Gmail/IMAP poller | `workers.united.eu@gmail.com`; outbound system mail still uses `queueEmail()` / `src/lib/email-queue.ts`, while the channel agent uses `/api/cron/email-agent` to read the contact inbox directly over IMAP, send Hermes replies through SMTP, and skip auto/bulk/self mail without n8n. |
 | Hosting | **Vercel** | Cron jobs configured in `vercel.json` |
 | Icons | **Lucide React** | — |
 | WhatsApp | **Meta Cloud API v21.0** | Template messages, shared Hermes/Agent channel replies, local AI fallback, delivery tracking, plus health classification that separates platform-side template failures from recipient-side delivery blocks (`undeliverable`, country restriction); proactive template suppression now keys off the latest real Meta outbound status and automatically decays after a short window instead of treating one stale recipient failure as a permanent block |
@@ -85,12 +85,12 @@ Workers-United/
 │   │   │   └── email-preview/ # Internal email template sandbox; reuses the shared email-preview workspace while keeping owner-only shortcuts and query-driven payload previews separate from the business admin shell
 │   │   ├── api/               # API routes grouped by domain (admin, auth, agency, payments, messaging, AI, cron)
 │   │   │   ├── account/       # delete, export (GDPR)
-│   │   │   ├── agent/email/   # Bearer-protected inbound bridge for contact@workersunited.eu messages into the shared Hermes/Agent channel
+│   │   │   ├── agent/email/   # Bearer-protected inbound bridge for workers.united.eu@gmail.com messages into the shared Hermes/Agent channel
 │   │   │   ├── admin/         # delete-user, employer-status, funnel-metrics (now including payment-quality breakdown plus worker/billing-country issue signals), admin inbox support list, agency-worker approval API with truthful approval-email notification payloads, `admin-review` structured form actions that redirect with truthful re-upload email status, authenticated `send-campaign` outreach dispatch via `queueEmail()`, authenticated WhatsApp blast dispatch via the shared blast helper/strict payment-readiness gate, authenticated `/api/admin/whatsapp-thread-view` seen-state writes for the admin WhatsApp console, and same-origin document preview streaming with legacy image auto-rotation self-heal; manual-match/re-verify are now fully workerId-first
 │   │   │   ├── auth/          # hash-session finalize endpoint used by `/login` after Supabase email/magic-link/recovery redirects
 │   │   │   ├── agency/        # agency claim + agency-owned worker APIs (detail GET/PATCH + documents GET/upload)
 │   │   │   ├── conversations/ # in-platform messaging APIs (`support` thread bootstrap, `match` thread summaries, shared message send/read with anti-contact leakage guardrails)
-│   │   │   ├── cron/          # 12 cron jobs (see below); `email-agent` polls contact@workersunited.eu directly over IMAP every 5 minutes, `brain-monitor` is the deterministic ops-first daily sweep, reminder/expiry mailers use the unified email queue, `process-email-queue` picks up retryable pending email rows every 15 minutes, checkout-recovery step-3 abandonment targets only the specific stale pending attempt id, and email-heavy crons no longer count/log queue failures as successful sends
+│   │   │   ├── cron/          # 12 cron jobs (see below); `email-agent` polls workers.united.eu@gmail.com directly over IMAP every 5 minutes, `brain-monitor` is the deterministic ops-first daily sweep, reminder/expiry mailers use the unified email queue, `process-email-queue` picks up retryable pending email rows every 15 minutes, checkout-recovery step-3 abandonment targets only the specific stale pending attempt id, and email-heavy crons no longer count/log queue failures as successful sends
 │   │   │   ├── documents/     # verify, verify-passport, request-review (fully workerId-first)
 │   │   │   ├── contracts/     # prepare, generate (DOCX documents)
 │   │   │   ├── stripe/        # create-checkout, webhook, confirm-session fallback; checkout now prebuilds Stripe Customer identity context from canonical worker data, webhook + confirm-session share payment/activation/email finalization helpers, and payment telemetry persists decline/risk plus billing/card-country hints
@@ -226,7 +226,7 @@ Configured in `vercel.json`:
 | `/api/cron/process-email-queue` | Every 15 minutes | Process retryable pending email queue rows through the shared SMTP retry helper |
 | `/api/cron/system-smoke` | Every hour at :30 | Route + service smoke monitor (`/`, auth pages, `/api/health`) with critical alert cooldown; optional degraded services now surface as warnings instead of silent healthy |
 | `/api/cron/whatsapp-improve` | Daily 4 AM UTC | Runs low-risk WhatsApp conversation learning/quality improvement maintenance |
-| `/api/cron/email-agent` | Every 5 minutes | Directly polls `contact@workersunited.eu` over Gmail/IMAP, calls shared Hermes/Agent for real inbound mail, and replies through SMTP; no n8n workflow is involved |
+| `/api/cron/email-agent` | Every 5 minutes | Directly polls `workers.united.eu@gmail.com` over Gmail/IMAP, calls shared Hermes/Agent for real inbound mail, and replies through SMTP; no n8n workflow is involved |
 
 ---
 
@@ -248,7 +248,7 @@ User (Browser)
   │     └─► /api/whatsapp/webhook → shared Hermes/Agent first, local AI/deterministic fallback only when needed
   │
   ├─► Email (Nodemailer + SMTP)
-  │     ├─► contact@workersunited.eu inbound agent via Gmail/IMAP → shared Hermes/Agent → SMTP reply
+  │     ├─► workers.united.eu@gmail.com inbound agent via Gmail/IMAP → shared Hermes/Agent → SMTP reply
   │     ├─► Contact form auto-reply
   │     ├─► Status change notifications
   │     ├─► Profile reminders (cron)
@@ -532,8 +532,8 @@ When adding a new feature, follow this order:
 | `WHATSAPP_RESPONSE_MODEL` | OpenAI | Optional |
 | `BRAIN_DAILY_MODEL` | OpenAI | Optional |
 | `GEMINI_API_KEY` | Google Gemini AI fallback | ✅ |
-| `SMTP_USER` | Google Workspace email | ✅ |
-| `SMTP_PASS` | Google Workspace app password | ✅ |
+| `SMTP_USER` | Gmail email | ✅ |
+| `SMTP_PASS` | Gmail app password | ✅ |
 | `CRON_SECRET` | Vercel cron auth | ✅ |
 | `SHARED_AGENT_BASE_URL` | Shared Hermes/Agent gateway | Required for WhatsApp/email channel agent |
 | `SHARED_AGENT_API_KEY` | Shared Hermes/Agent gateway | Required for WhatsApp/email channel agent |
@@ -579,7 +579,7 @@ Note: `OPENAI_API_KEY` and `GEMINI_API_KEY` are still used by document verificat
 ### Email Queue
 - The `email_queue` table has a CHECK constraint on the `type` column. Only use types that exist in the constraint (e.g., `document_reminder`, `profile_incomplete`). New types must be added to the DB constraint first.
 - Invalid-email cleanup is an ops responsibility, not just a mailer concern. Known typo/internal domains (`gmai.com`, `gmial.com`, `yahoo.coms`, `1yahoo.com`, `@workersunited.org`, etc.) should be excluded from reminders/reporting and deleted if the worker has no payments, documents, conversations, or other real business activity.
-- `contact@workersunited.eu` channel agent is direct Gmail/IMAP polling plus SMTP replies. Do not put n8n between the inbox and `/api/cron/email-agent`, and do not add a dashboard button/page for this agent.
+- `workers.united.eu@gmail.com` channel agent is direct Gmail/IMAP polling plus SMTP replies. Do not put n8n between the inbox and `/api/cron/email-agent`, and do not add a dashboard button/page for this agent.
 
 ### WhatsApp Delivery
 - `src/lib/whatsapp.ts` must log failed sends with `status = failed` **and** a real `error_message`; otherwise cron metrics will falsely look healthy while templates silently fail.

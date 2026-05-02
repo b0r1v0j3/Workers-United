@@ -20,7 +20,7 @@ WhatsApp bot (Claude-powered) handles inbound conversations in 6+ languages.
 - **OpenAI**: OPENAI_API_KEY — powers intent classification (GPT-5 mini) + voice transcription (Whisper)
 - **Stripe**: STRIPE_SECRET_KEY (live); checkout products/prices are configured in Stripe and referenced by the app
 - **Supabase**: SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SUPABASE_URL
-- **SMTP**: contact@workersunited.eu via SMTP_USER/SMTP_PASS
+- **SMTP**: workers.united.eu@gmail.com via SMTP_USER/SMTP_PASS
 - **Owner alerts / god mode**: OWNER_EMAIL
 - **Meta**: META_APP_SECRET for webhook signature verification
 

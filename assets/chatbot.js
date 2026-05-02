@@ -258,7 +258,7 @@
             if (res.ok) {
                 addBotMessage("✅ Application received! Our team will contact you via email.");
             } else {
-                addBotMessage("⚠️ Something went wrong. Please email us at contact@workersunited.eu");
+                addBotMessage("⚠️ Something went wrong. Please email us at workers.united.eu@gmail.com");
             }
         } catch (e) {
             removeTyping();

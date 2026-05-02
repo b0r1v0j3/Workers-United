@@ -112,7 +112,7 @@ describe("GET /api/cron/system-smoke", () => {
     });
 
     it("falls back to SMTP_USER when OWNER_EMAIL is not set", async () => {
-        process.env.SMTP_USER = "contact@workersunited.eu";
+        process.env.SMTP_USER = "workers.united.eu@gmail.com";
 
         const { GET } = await import("@/app/api/cron/system-smoke/route");
         const response = await GET(new Request("http://localhost/api/cron/system-smoke", {
@@ -123,7 +123,7 @@ describe("GET /api/cron/system-smoke", () => {
 
         expect(response.status).toBe(200);
         expect(sendEmail).toHaveBeenCalledWith(
-            "contact@workersunited.eu",
+            "workers.united.eu@gmail.com",
             "System Smoke Check CRITICAL",
             expect.stringContaining("Workers United Smoke Check Alert")
         );

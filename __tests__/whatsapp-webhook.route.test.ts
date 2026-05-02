@@ -107,7 +107,7 @@ vi.mock("@/lib/platform-config", async () => {
         getPlatformConfig: vi.fn(async () => ({
             platform_name: "Workers United",
             website_url: "https://workersunited.eu",
-            contact_email: "contact@workersunited.eu",
+            contact_email: "workers.united.eu@gmail.com",
         })),
     };
 });

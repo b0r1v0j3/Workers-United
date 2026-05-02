@@ -367,7 +367,7 @@ describe("whatsapp-brain guards", () => {
 
         expect(reply).toContain("formal vocational diploma");
         expect(reply).toContain("not ready to move forward yet");
-        expect(reply).toContain("contact@workersunited.eu");
+        expect(reply).toContain("workers.united.eu@gmail.com");
         expect(reply).not.toContain("WhatsApp attachments are not linked");
     });
 
@@ -381,7 +381,7 @@ describe("whatsapp-brain guards", () => {
         expect(reply).toContain("Passport and formal diploma can be uploaded as a clear image or PDF file");
         expect(reply).toContain("The biometric photo should be a clear image file, not a PDF");
         expect(reply).toContain("/signup");
-        expect(reply).toContain("contact@workersunited.eu");
+        expect(reply).toContain("workers.united.eu@gmail.com");
     });
 
     it("makes anonymous status replies explicit when the WhatsApp number is not linked to an account", () => {
@@ -470,7 +470,7 @@ describe("whatsapp-brain guards", () => {
         });
 
         expect(reply).toContain("support inbox");
-        expect(reply).toContain("contact@workersunited.eu");
+        expect(reply).toContain("workers.united.eu@gmail.com");
         expect(reply).not.toContain("otvorio");
         expect(reply).not.toContain("ticket");
     });
@@ -577,7 +577,7 @@ describe("whatsapp-brain guards", () => {
 
         expect(reply).toContain("cannot pass the required-document stage yet");
         expect(reply).toContain("/profile/worker");
-        expect(reply).toContain("contact@workersunited.eu");
+        expect(reply).toContain("workers.united.eu@gmail.com");
         expect(reply).not.toContain("WhatsApp attachments are not linked");
     });
 
@@ -594,7 +594,7 @@ describe("whatsapp-brain guards", () => {
         expect(reply).toContain("Passport and formal diploma can be uploaded as a clear image or PDF file");
         expect(reply).toContain("/profile/worker");
         expect(reply).toContain("not a PDF");
-        expect(reply).toContain("contact@workersunited.eu");
+        expect(reply).toContain("workers.united.eu@gmail.com");
     });
 
     it("describes the registered worker process with dashboard checkout wording", () => {

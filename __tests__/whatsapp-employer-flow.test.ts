@@ -132,13 +132,13 @@ describe("whatsapp-employer-flow", () => {
 
     it("returns deterministic fallback copy for employer flow", () => {
         expect(getEmployerWhatsAppDefaultReply("sr")).toContain("besplatno za poslodavce");
-        expect(getEmployerWhatsAppErrorReply("en")).toContain("contact@workersunited.eu");
+        expect(getEmployerWhatsAppErrorReply("en")).toContain("workers.united.eu@gmail.com");
         expect(getEmployerWhatsAppStaticReply("en")).toContain("Register at https://workersunited.eu/signup");
     });
 
     it("supports multilingual employer fallback copy", () => {
         expect(getEmployerWhatsAppDefaultReply("French")).toContain("entreprises");
-        expect(getEmployerWhatsAppErrorReply("Arabic")).toContain("contact@workersunited.eu");
+        expect(getEmployerWhatsAppErrorReply("Arabic")).toContain("workers.united.eu@gmail.com");
         expect(getEmployerWhatsAppStaticReply("Hindi")).toContain("workersunited.eu/signup");
     });
 

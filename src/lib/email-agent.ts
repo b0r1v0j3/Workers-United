@@ -1,4 +1,5 @@
 import { sendEmail } from "@/lib/mailer";
+import { DEFAULT_PLATFORM_SUPPORT_EMAIL } from "@/lib/platform-contact";
 import { escapeHtml } from "@/lib/sanitize";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -30,7 +31,7 @@ export type EmailAgentResult = {
     gatewaySessionId: string | null;
 };
 
-export const CONTACT_EMAIL = "contact@workersunited.eu";
+export const CONTACT_EMAIL = DEFAULT_PLATFORM_SUPPORT_EMAIL;
 
 const MAX_EMAIL_TEXT_LENGTH = 6000;
 

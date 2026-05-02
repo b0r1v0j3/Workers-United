@@ -36,7 +36,7 @@ const sampleData: ContractDataForDocs = {
     end_date: "2027-04-01",
     signing_date: "2026-03-15",
 
-    contact_email: "contact@workersunited.eu",
+    contact_email: "workers.united.eu@gmail.com",
     contact_phone: "+381 11 123 4567",
 
     accommodation_address: "Bulevar Oslobođenja 50, Beograd",

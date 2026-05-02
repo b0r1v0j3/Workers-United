@@ -1,5 +1,5 @@
 export const DEFAULT_PLATFORM_WEBSITE_URL = "https://workersunited.eu";
-export const DEFAULT_PLATFORM_SUPPORT_EMAIL = "contact@workersunited.eu";
+export const DEFAULT_PLATFORM_SUPPORT_EMAIL = "workers.united.eu@gmail.com";
 export const DEFAULT_PLATFORM_WHATSAPP_NUMBER = "15557839521";
 
 export interface PlatformContactInfo {

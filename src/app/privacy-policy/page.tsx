@@ -149,7 +149,7 @@ export default async function PrivacyPolicyPage() {
                             <li><strong className="text-[#1D1D1F]">Supabase (database &amp; storage):</strong> Stores your account data, profile information, and uploaded documents. Servers located in the EU.</li>
                             <li><strong className="text-[#1D1D1F]">Stripe (payment processing):</strong> Processes your payments securely. Stripe is certified under the EU-US Data Privacy Framework.</li>
                             <li><strong className="text-[#1D1D1F]">Google / Gemini AI (document verification):</strong> Your uploaded documents are processed by Google&apos;s AI to verify authenticity. Google is certified under the EU-US Data Privacy Framework.</li>
-                            <li><strong className="text-[#1D1D1F]">Google Workspace (email):</strong> Used to send and receive emails. Google is certified under the EU-US Data Privacy Framework.</li>
+                            <li><strong className="text-[#1D1D1F]">Gmail (email):</strong> Used to send and receive emails. Google is certified under the EU-US Data Privacy Framework.</li>
                             <li><strong className="text-[#1D1D1F]">Vercel (hosting):</strong> Hosts our website. Vercel complies with GDPR requirements.</li>
                             <li><strong className="text-[#1D1D1F]">European employers:</strong> Your profile data is shared with matched employers <strong className="text-[#1D1D1F]">only after you have been matched and the visa process has been initiated</strong>. We will never share your data with employers without your knowledge.</li>
                         </ul>
