@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Montserrat } from "next/font/google";
 import "./globals.css";
+import Script from "next/script";
 import { GodModeWrapper } from "@/components/GodModeWrapper";
 import CookieConsent from "@/components/CookieConsent";
 import ToastProvider from "@/components/ToastProvider";
@@ -86,6 +87,8 @@ export default function RootLayout({
         <ToastProvider />
         <WhatsAppButton />
         <PageTracker />
+        {/* Vercel Web Analytics */}
+        <Script src="/_vercel/insights/script.js" strategy="afterInteractive" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
