@@ -5,10 +5,12 @@ import type { ParsedMail } from "mailparser";
 import {
     CONTACT_EMAIL,
     handleInboundEmailAgent,
+    isEmailAgentEnabled,
     isValidEmail,
     normalizeEmail,
     stripHtml,
 } from "@/lib/email-agent";
+import { isAutomatedNotificationSender } from "@/lib/email-skip-filter";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -92,8 +94,8 @@ function shouldSkipEmail({
         return "own_message";
     }
 
-    if (/^(no-?reply|do-?not-?reply|mailer-daemon|postmaster)@/i.test(normalizedFrom)) {
-        return "system_sender";
+    if (isAutomatedNotificationSender(normalizedFrom)) {
+        return "notification_service";
     }
 
     const autoSubmitted = getHeaderText(headers.get("auto-submitted")).trim().toLowerCase();
@@ -121,6 +123,12 @@ export async function GET(request: NextRequest) {
     const cronSecret = getCronSecret();
     if (!cronSecret || getBearerToken(request) !== cronSecret) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Kill switch: off unless EMAIL_AGENT_ENABLED="true". Disabled 2026-06-02 to stop
+    // auto-replies and the Netlify "Form Responses" bounce loop. No IMAP connection while off.
+    if (!isEmailAgentEnabled()) {
+        return NextResponse.json({ success: true, disabled: true, reason: "email_agent_disabled" });
     }
 
     const smtpUser = process.env.SMTP_USER || "";

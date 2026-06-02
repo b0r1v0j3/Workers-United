@@ -4,6 +4,13 @@
 
 ---
 
+**Email auto-reply agent ugašen + anti-loop filter (02.06.2026)**
+- Auto-reply email agent (cron `/api/cron/email-agent` svakih 5 min + webhook `/api/agent/email`) stavljen iza prekidača `EMAIL_AGENT_ENABLED`; podrazumevano **ISKLJUČEN** da prestane slanje AI auto-odgovora i Netlify "Form Responses" bounce petlja
+- Novi `src/lib/email-skip-filter.ts` (`isAutomatedNotificationSender`) — agent više nikad ne odgovara na Netlify / web3forms / no-reply / bounce notifikacije; pravi upiti i dalje dobijaju odgovor (kad se agent ponovo uključi)
+- Za ponovno uključivanje: postaviti `EMAIL_AGENT_ENABLED=true` u Vercel env (Production)
+
+---
+
 **Legacy Automation Retirement Cleanup (18.03.2026)**
 - Uklonjeni preostali legacy automation runtime tragovi iz health/smoke/email-queue tokova i cloud dijagnostike
 - Dokumentacija i istorijski opisi preformulisani tako da retired automation servis više nije prikazan kao aktivni deo platforme

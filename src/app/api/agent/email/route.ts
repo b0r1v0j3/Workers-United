@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { handleInboundEmailAgent, type EmailAgentPayload } from "@/lib/email-agent";
+import { handleInboundEmailAgent, isEmailAgentEnabled, type EmailAgentPayload } from "@/lib/email-agent";
 import { getSharedAgentGatewayConfig } from "@/lib/workers-agent";
 
 function getWebhookSecret(): string {
@@ -19,6 +19,10 @@ export async function POST(request: NextRequest) {
 
     if (getBearerToken(request) !== secret) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!isEmailAgentEnabled()) {
+        return NextResponse.json({ success: true, disabled: true, reason: "email_agent_disabled" });
     }
 
     const config = getSharedAgentGatewayConfig();

@@ -35,6 +35,18 @@ export const CONTACT_EMAIL = DEFAULT_PLATFORM_SUPPORT_EMAIL;
 
 const MAX_EMAIL_TEXT_LENGTH = 6000;
 
+/**
+ * Kill switch for the auto-reply email agent.
+ *
+ * Disabled by default (2026-06-02) to stop AI auto-replies and the Netlify
+ * "Form Responses" bounce loop. Set EMAIL_AGENT_ENABLED="true" in the Vercel
+ * environment to turn the auto-reply back on. Checked at every entry point
+ * (cron + webhook) so nothing sends while it is off.
+ */
+export function isEmailAgentEnabled(): boolean {
+    return process.env.EMAIL_AGENT_ENABLED === "true";
+}
+
 export function stripHtml(html: string): string {
     return html
         .replace(/<style[\s\S]*?<\/style>/gi, " ")
